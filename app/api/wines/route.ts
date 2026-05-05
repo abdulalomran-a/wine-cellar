@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { findWineImage } from '@/lib/wine-image'
 
 export async function GET() {
   const { data, error } = await supabase
@@ -13,6 +14,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
+
+  if (!body.image_url && body.name) {
+    body.image_url = await findWineImage(body.name, body.winery)
+  }
+
   const { data, error } = await supabase
     .from('wines')
     .insert([{ ...body, updated_at: new Date().toISOString() }])

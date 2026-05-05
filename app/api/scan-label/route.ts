@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { findWineImage } from '@/lib/wine-image'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -46,7 +47,8 @@ Return only the JSON object, no other text.`,
     if (!jsonMatch) return NextResponse.json({ error: 'Could not parse label' }, { status: 422 })
 
     const wine = JSON.parse(jsonMatch[0])
-    return NextResponse.json({ found: true, ...wine })
+    const image_url = await findWineImage(wine.name, wine.winery)
+    return NextResponse.json({ found: true, ...wine, image_url })
   } catch (err) {
     console.error('scan-label error:', err)
     return NextResponse.json({ error: 'Failed to scan label' }, { status: 500 })

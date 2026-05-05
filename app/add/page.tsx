@@ -109,6 +109,7 @@ function AddWineForm() {
             varietal: data.varietal || prev.varietal,
             region: data.region || prev.region,
             country: data.country || prev.country,
+            image_url: data.image_url || prev.image_url,
           }))
           setLabelState('found')
         } else {
