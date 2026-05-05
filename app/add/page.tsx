@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import LocationSelect from '@/components/LocationSelect'
@@ -36,9 +36,12 @@ function AddWineForm() {
   const [form, setForm] = useState<WineForm>({ ...EMPTY, barcode: params.get('barcode') ?? '' })
   const [showScanner, setShowScanner] = useState(false)
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
+  const [labelState, setLabelState] = useState<'idle' | 'loading' | 'found' | 'error'>('idle')
+  const [labelPreview, setLabelPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [imgError, setImgError] = useState(false)
+  const labelInputRef = useRef<HTMLInputElement>(null)
 
   function set(field: keyof WineForm, value: string | number) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -75,6 +78,47 @@ function AddWineForm() {
     setShowScanner(false)
     set('barcode', barcode)
     await lookup(barcode)
+  }
+
+  async function handleLabelPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLabelState('loading')
+    setLabelPreview(null)
+
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const dataUrl = reader.result as string
+      setLabelPreview(dataUrl)
+      const base64 = dataUrl.split(',')[1]
+      const mediaType = file.type || 'image/jpeg'
+
+      try {
+        const res = await fetch('/api/scan-label', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64, mediaType }),
+        })
+        const data = await res.json()
+        if (data.found) {
+          setForm(prev => ({
+            ...prev,
+            name: data.name || prev.name,
+            winery: data.winery || prev.winery,
+            vintage: data.vintage?.toString() || prev.vintage,
+            varietal: data.varietal || prev.varietal,
+            region: data.region || prev.region,
+            country: data.country || prev.country,
+          }))
+          setLabelState('found')
+        } else {
+          setLabelState('error')
+        }
+      } catch {
+        setLabelState('error')
+      }
+    }
+    reader.readAsDataURL(file)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -115,7 +159,45 @@ function AddWineForm() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Add Wine</h1>
-        <p className="text-gray-500 text-sm mt-1">Scan a barcode to auto-fill details, or enter manually</p>
+        <p className="text-gray-500 text-sm mt-1">Scan the label or barcode to auto-fill, or enter manually</p>
+      </div>
+
+      {/* Label photo scan (Vivino-style) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+        <h2 className="font-semibold text-gray-800">Scan Label</h2>
+        <p className="text-xs text-gray-500">Point your camera at the wine label and Claude will identify the wine</p>
+
+        <input
+          ref={labelInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleLabelPhoto}
+        />
+
+        <button
+          type="button"
+          onClick={() => labelInputRef.current?.click()}
+          disabled={labelState === 'loading'}
+          className="w-full py-3 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
+        >
+          {labelState === 'loading' ? 'Reading label...' : 'Take Label Photo'}
+        </button>
+
+        {labelState === 'found' && (
+          <p className="text-sm text-green-700">Label recognised — details filled in below.</p>
+        )}
+        {labelState === 'error' && (
+          <p className="text-sm text-amber-700">Could not read label — please fill in details manually.</p>
+        )}
+
+        {labelPreview && (
+          <div className="flex justify-center pt-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={labelPreview} alt="Label photo" className="max-h-48 object-contain rounded-lg border border-gray-100 shadow-sm" />
+          </div>
+        )}
       </div>
 
       {/* Barcode scanner */}
