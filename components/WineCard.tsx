@@ -1,8 +1,7 @@
 'use client'
 
+import { useState } from 'react'
 import { Wine } from '@/lib/supabase'
-import { MapPin, Star, Trash2, Edit2, Wine as WineIcon } from 'lucide-react'
-import Image from 'next/image'
 
 interface Props {
   wine: Wine
@@ -11,13 +10,25 @@ interface Props {
 }
 
 export default function WineCard({ wine, onDelete, onEdit }: Props) {
+  const [imgError, setImgError] = useState(false)
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow overflow-hidden flex">
-      <div className="w-20 flex-shrink-0 bg-gradient-to-b from-purple-50 to-purple-100 flex items-center justify-center">
-        {wine.image_url ? (
-          <Image src={wine.image_url} alt={wine.name} width={80} height={120} className="object-contain h-full" />
+      {/* Bottle image */}
+      <div className="w-24 flex-shrink-0 bg-gray-50 flex items-center justify-center border-r border-gray-100" style={{ minHeight: 120 }}>
+        {wine.image_url && !imgError ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={wine.image_url}
+            alt={wine.name}
+            className="w-full h-full object-contain"
+            style={{ maxHeight: 140 }}
+            onError={() => setImgError(true)}
+          />
         ) : (
-          <WineIcon className="w-8 h-8 text-purple-300" />
+          <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs text-center p-2" style={{ minHeight: 120 }}>
+            No photo
+          </div>
         )}
       </div>
 
@@ -27,51 +38,53 @@ export default function WineCard({ wine, onDelete, onEdit }: Props) {
             <h3 className="font-semibold text-gray-900 truncate">{wine.name}</h3>
             {wine.winery && <p className="text-sm text-gray-500 truncate">{wine.winery}</p>}
           </div>
-          <div className="flex gap-1 flex-shrink-0">
+          <div className="flex gap-1.5 flex-shrink-0">
             <button
               onClick={() => onEdit(wine)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+              className="px-2.5 py-1 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
             >
-              <Edit2 className="w-4 h-4" />
+              Edit
             </button>
             <button
               onClick={() => onDelete(wine.id)}
-              className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500"
+              className="px-2.5 py-1 text-xs border border-red-100 rounded-lg hover:bg-red-50 text-red-500"
             >
-              <Trash2 className="w-4 h-4" />
+              Remove
             </button>
           </div>
         </div>
 
-        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+        <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
           {wine.vintage && (
-            <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+            <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium">
               {wine.vintage}
             </span>
           )}
           {wine.varietal && (
-            <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">
+            <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded">
               {wine.varietal}
             </span>
           )}
           {wine.region && (
-            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
               {wine.region}
+            </span>
+          )}
+          {wine.country && (
+            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+              {wine.country}
             </span>
           )}
         </div>
 
-        <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-          <span className="flex items-center gap-1">
-            <MapPin className="w-3 h-3" /> {wine.location}
-          </span>
-          <span className="bg-gray-100 px-2 py-0.5 rounded-full">Qty: {wine.quantity}</span>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+          <span>{wine.location}</span>
+          <span>Qty: {wine.quantity}</span>
           {wine.rating && (
-            <span className="flex items-center gap-0.5 text-amber-500">
-              {Array.from({ length: wine.rating }).map((_, i) => (
-                <Star key={i} className="w-3 h-3 fill-current" />
-              ))}
-            </span>
+            <span className="text-amber-600 font-medium">{wine.rating}/5</span>
+          )}
+          {wine.purchase_price && (
+            <span>{wine.purchase_price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
           )}
         </div>
       </div>

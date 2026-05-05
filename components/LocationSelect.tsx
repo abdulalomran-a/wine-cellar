@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { MapPin, Plus } from 'lucide-react'
 
 interface Props {
   value: string
@@ -38,9 +37,7 @@ export default function LocationSelect({ value, onChange }: Props) {
 
   return (
     <div className="space-y-2">
-      <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-        <MapPin className="w-4 h-4" /> Location *
-      </label>
+      <label className="text-sm font-medium text-gray-700">Location *</label>
 
       <select
         value={value}
@@ -59,7 +56,7 @@ export default function LocationSelect({ value, onChange }: Props) {
         {locations.map(loc => (
           <option key={loc} value={loc}>{loc}</option>
         ))}
-        <option value="__custom__">+ Add new location</option>
+        <option value="__custom__">Add new location...</option>
       </select>
 
       {showCustom && (
@@ -76,9 +73,9 @@ export default function LocationSelect({ value, onChange }: Props) {
           <button
             type="button"
             onClick={addLocation}
-            className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 flex items-center gap-1"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
           >
-            <Plus className="w-4 h-4" /> Add
+            Add
           </button>
         </div>
       )}

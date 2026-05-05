@@ -4,7 +4,6 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import LocationSelect from '@/components/LocationSelect'
-import { ScanLine, Loader2, CheckCircle, AlertCircle, Star, Wine } from 'lucide-react'
 
 const BarcodeScanner = dynamic(() => import('@/components/BarcodeScanner'), { ssr: false })
 
@@ -39,6 +38,7 @@ function AddWineForm() {
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imgError, setImgError] = useState(false)
 
   function set(field: keyof WineForm, value: string | number) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -47,6 +47,7 @@ function AddWineForm() {
   async function lookup(barcode: string) {
     if (!barcode.trim()) return
     setLookupState('loading')
+    setImgError(false)
     try {
       const res = await fetch(`/api/lookup?barcode=${encodeURIComponent(barcode)}`)
       const data = await res.json()
@@ -114,14 +115,12 @@ function AddWineForm() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Add Wine</h1>
-        <p className="text-gray-500 text-sm mt-1">Scan a barcode or fill in the details manually</p>
+        <p className="text-gray-500 text-sm mt-1">Scan a barcode to auto-fill details, or enter manually</p>
       </div>
 
-      {/* Barcode section */}
+      {/* Barcode scanner */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-        <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-          <ScanLine className="w-4 h-4 text-purple-500" /> Barcode
-        </h2>
+        <h2 className="font-semibold text-gray-800">Barcode</h2>
         <div className="flex gap-2">
           <input
             type="text"
@@ -141,39 +140,43 @@ function AddWineForm() {
           <button
             type="button"
             onClick={() => setShowScanner(true)}
-            className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 flex items-center gap-1"
+            className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
           >
-            <ScanLine className="w-4 h-4" /> Scan
+            Scan
           </button>
         </div>
 
         {lookupState === 'loading' && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Loader2 className="w-4 h-4 animate-spin" /> Looking up wine info...
-          </div>
+          <p className="text-sm text-gray-500">Looking up bottle online...</p>
         )}
         {lookupState === 'found' && (
-          <div className="flex items-center gap-2 text-sm text-emerald-600">
-            <CheckCircle className="w-4 h-4" /> Wine info found and filled in below!
-          </div>
+          <p className="text-sm text-green-700">Bottle found — details and photo filled in below.</p>
         )}
         {lookupState === 'notfound' && (
-          <div className="flex items-center gap-2 text-sm text-amber-600">
-            <AlertCircle className="w-4 h-4" /> No info found — fill in details manually below.
+          <p className="text-sm text-amber-700">Not found in database — fill in details below.</p>
+        )}
+
+        {/* Bottle photo preview */}
+        {form.image_url && !imgError && (
+          <div className="flex justify-center pt-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={form.image_url}
+              alt="Bottle label"
+              className="max-h-64 object-contain rounded-lg border border-gray-100 shadow-sm"
+              onError={() => setImgError(true)}
+            />
           </div>
         )}
       </div>
 
-      {/* Wine form */}
+      {/* Wine details form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
-        <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-          <Wine className="w-4 h-4 text-purple-500" /> Wine Details
-        </h2>
+        <h2 className="font-semibold text-gray-800">Wine Details</h2>
 
-        <Field label="Wine Name *" required>
+        <Field label="Wine Name *">
           <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
-            placeholder="e.g. Château Margaux" required
-            className="input" />
+            placeholder="e.g. Chateau Margaux" required className="input" />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
@@ -212,7 +215,7 @@ function AddWineForm() {
         <LocationSelect value={form.location} onChange={v => set('location', v)} />
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Purchase Price (€)">
+          <Field label="Purchase Price (EUR)">
             <input type="number" value={form.purchase_price} onChange={e => set('purchase_price', e.target.value)}
               placeholder="0.00" step="0.01" min={0} className="input" />
           </Field>
@@ -222,18 +225,20 @@ function AddWineForm() {
           </Field>
         </div>
 
-        <Field label="Rating">
-          <div className="flex gap-1 pt-1">
+        <Field label="Rating (1–5)">
+          <div className="flex gap-2 pt-1">
             {[1, 2, 3, 4, 5].map(n => (
               <button
                 key={n}
                 type="button"
                 onClick={() => set('rating', form.rating === n ? 0 : n)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                  n <= form.rating ? 'text-amber-400' : 'text-gray-200 hover:text-amber-200'
+                className={`w-9 h-9 rounded-lg border text-sm font-medium transition-colors ${
+                  n <= form.rating
+                    ? 'bg-amber-500 border-amber-500 text-white'
+                    : 'border-gray-200 text-gray-400 hover:border-amber-300'
                 }`}
               >
-                <Star className="w-5 h-5 fill-current" />
+                {n}
               </button>
             ))}
           </div>
@@ -258,9 +263,8 @@ function AddWineForm() {
           <button
             type="submit"
             disabled={saving || !form.name.trim() || !form.location}
-            className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {saving ? 'Saving...' : 'Save Wine'}
           </button>
         </div>
@@ -273,10 +277,10 @@ function AddWineForm() {
   )
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <label className="text-sm font-medium text-gray-700">{label}{required && ' *'}</label>
+      <label className="text-sm font-medium text-gray-700">{label}</label>
       {children}
     </div>
   )

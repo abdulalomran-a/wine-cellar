@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Camera } from 'lucide-react'
 import type { Html5Qrcode as Html5QrcodeType } from 'html5-qrcode'
 
 interface Props {
@@ -47,12 +46,9 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <Camera className="w-5 h-5 text-purple-600" />
-            <h2 className="font-semibold text-gray-900">Scan Barcode</h2>
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
-            <X className="w-5 h-5" />
+          <h2 className="font-semibold text-gray-900">Scan Barcode</h2>
+          <button onClick={onClose} className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">
+            Close
           </button>
         </div>
 
@@ -66,7 +62,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
               <div id="barcode-reader" className="w-full rounded-lg overflow-hidden" />
               {scanning && (
                 <p className="text-center text-sm text-gray-500 mt-3">
-                  Point camera at the barcode on the wine bottle
+                  Point camera at the barcode on the bottle
                 </p>
               )}
             </>

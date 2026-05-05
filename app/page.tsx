@@ -7,7 +7,6 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts'
-import { Wine as WineIcon, MapPin, TrendingUp, Star, PlusCircle } from 'lucide-react'
 
 const COLORS = ['#7c3aed', '#a855f7', '#c084fc', '#e879f9', '#f0abfc', '#ddd6fe']
 
@@ -46,11 +45,10 @@ export default function Dashboard() {
   if (wines.length === 0) {
     return (
       <div className="text-center py-20">
-        <WineIcon className="w-16 h-16 text-purple-200 mx-auto mb-4" />
         <h2 className="text-xl font-semibold text-gray-700 mb-2">Your cellar is empty</h2>
         <p className="text-gray-500 mb-6">Start by scanning a barcode or adding a wine manually.</p>
-        <Link href="/add" className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium">
-          <PlusCircle className="w-5 h-5" /> Add your first wine
+        <Link href="/add" className="inline-flex px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium">
+          Add your first wine
         </Link>
       </div>
     )
@@ -64,17 +62,15 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard icon={<WineIcon className="w-5 h-5 text-purple-600" />} label="Total Bottles" value={totalBottles} />
-        <StatCard icon={<WineIcon className="w-5 h-5 text-pink-500" />} label="Unique Wines" value={wines.length} />
-        <StatCard icon={<TrendingUp className="w-5 h-5 text-emerald-500" />} label="Wineries" value={uniqueWineries} />
-        <StatCard icon={<Star className="w-5 h-5 text-amber-500" />} label="Avg Rating" value={avgRating} />
+        <StatCard label="Total Bottles" value={totalBottles} />
+        <StatCard label="Unique Wines" value={wines.length} />
+        <StatCard label="Wineries" value={uniqueWineries} />
+        <StatCard label="Avg Rating" value={avgRating} />
       </div>
 
       {locationData.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
-            <MapPin className="w-4 h-4 text-purple-500" /> Bottles by Location
-          </h3>
+          <h3 className="font-semibold text-gray-800 mb-3">Bottles by Location</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={locationData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
@@ -89,9 +85,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {varietalData.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
-              <WineIcon className="w-4 h-4 text-purple-500" /> By Varietal
-            </h3>
+            <h3 className="font-semibold text-gray-800 mb-3">By Varietal</h3>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={varietalData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}
@@ -106,9 +100,7 @@ export default function Dashboard() {
 
         {vintageData.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-purple-500" /> By Decade
-            </h3>
+            <h3 className="font-semibold text-gray-800 mb-3">By Decade</h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={vintageData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
@@ -130,9 +122,7 @@ export default function Dashboard() {
                 <span className="font-medium text-gray-800">{w.name}</span>
                 {w.vintage && <span className="text-gray-400 ml-1">{w.vintage}</span>}
               </div>
-              <span className="text-gray-500 text-xs flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {w.location}
-              </span>
+              <span className="text-gray-500 text-xs">{w.location}</span>
             </div>
           ))}
         </div>
@@ -146,10 +136,10 @@ export default function Dashboard() {
   )
 }
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
+function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-1">
-      <div className="flex items-center gap-2 text-xs text-gray-500">{icon}{label}</div>
+      <div className="text-xs text-gray-500">{label}</div>
       <div className="text-2xl font-bold text-gray-900">{value}</div>
     </div>
   )
