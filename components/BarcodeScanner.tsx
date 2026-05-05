@@ -19,9 +19,11 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
       const { Html5Qrcode } = await import('html5-qrcode')
       instance = new Html5Qrcode('barcode-reader')
       try {
+        // Use window width for the scan box so it fills iPhone screen properly
+        const vw = Math.min(window.innerWidth - 48, 360)
         await instance.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 280, height: 160 } },
+          { fps: 15, qrbox: { width: vw, height: Math.round(vw * 0.55) } },
           (decodedText) => {
             onDetected(decodedText)
             instance?.stop().catch(() => {})
@@ -30,7 +32,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         )
         setScanning(true)
       } catch (err) {
-        setError('Camera access denied. Please allow camera permissions.')
+        setError('Camera access denied. Please tap Allow when Safari asks for camera access.')
         console.error(err)
       }
     }
@@ -43,31 +45,38 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
   }, [onDetected])
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold text-gray-900">Scan Barcode</h2>
-          <button onClick={onClose} className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">
-            Close
-          </button>
-        </div>
+    // Full-screen on mobile, modal on desktop
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-3 bg-black/80">
+        <span className="text-white font-semibold text-base">Scan Barcode</span>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-sm text-white border border-white/30 rounded-lg"
+        >
+          Cancel
+        </button>
+      </div>
 
-        <div className="p-4">
-          {error ? (
-            <div className="text-center py-8 text-red-600">
-              <p>{error}</p>
-            </div>
-          ) : (
-            <>
-              <div id="barcode-reader" className="w-full rounded-lg overflow-hidden" />
-              {scanning && (
-                <p className="text-center text-sm text-gray-500 mt-3">
-                  Point camera at the barcode on the bottle
-                </p>
-              )}
-            </>
-          )}
-        </div>
+      {/* Camera view */}
+      <div className="flex-1 flex flex-col items-center justify-center">
+        {error ? (
+          <div className="text-center px-8">
+            <p className="text-white text-base mb-4">{error}</p>
+            <button onClick={onClose} className="px-6 py-3 bg-white text-gray-900 rounded-xl text-sm font-medium">
+              Go Back
+            </button>
+          </div>
+        ) : (
+          <>
+            <div id="barcode-reader" className="w-full" />
+            {scanning && (
+              <p className="text-white/70 text-sm mt-4 text-center px-4">
+                Hold the barcode steady in the frame
+              </p>
+            )}
+          </>
+        )}
       </div>
     </div>
   )

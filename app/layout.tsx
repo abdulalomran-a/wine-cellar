@@ -1,20 +1,39 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Link from 'next/link'
+import BottomNav from '@/components/BottomNav'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Wine Cellar',
   description: 'Track and manage your wine collection',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Wine Cellar',
+  },
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#7c3aed',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 min-h-screen`}>
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        {/* Desktop header — hidden on mobile */}
+        <header className="hidden sm:block bg-white border-b border-gray-200 sticky top-0 z-40">
           <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
             <Link href="/" className="font-bold text-purple-700 text-lg tracking-tight">
               Wine Cellar
@@ -32,7 +51,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
         </header>
-        <main className="max-w-2xl mx-auto px-4 py-6">{children}</main>
+
+        {/* Mobile header */}
+        <header className="sm:hidden bg-white border-b border-gray-200 sticky top-0 z-40">
+          <div className="px-4 h-12 flex items-center">
+            <span className="font-bold text-purple-700 text-base tracking-tight">Wine Cellar</span>
+          </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 py-4 sm:py-6 pb-24 sm:pb-6">
+          {children}
+        </main>
+
+        {/* Mobile bottom navigation */}
+        <BottomNav />
       </body>
     </html>
   )

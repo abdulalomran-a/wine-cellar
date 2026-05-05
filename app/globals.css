@@ -2,6 +2,8 @@
 
 body {
   font-family: var(--font-inter, Arial, Helvetica, sans-serif);
+  /* Prevent iOS bounce scroll */
+  overscroll-behavior: none;
 }
 
 .input {
@@ -9,7 +11,7 @@ body {
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
+  font-size: 1rem; /* 16px prevents iOS zoom on focus */
   outline: none;
   transition: box-shadow 0.15s, border-color 0.15s;
 }
@@ -17,4 +19,14 @@ body {
 .input:focus {
   box-shadow: 0 0 0 2px #7c3aed40;
   border-color: #7c3aed;
+}
+
+/* iOS safe area for bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Prevent text size adjustment on rotation */
+html {
+  -webkit-text-size-adjust: 100%;
 }
