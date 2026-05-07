@@ -128,6 +128,31 @@ function AddWineForm() {
     setSaving(true)
     setError(null)
     try {
+      // Check for existing wine with same name + vintage
+      const existing = await fetch('/api/wines').then(r => r.json()) as Array<{id: string; name: string; vintage: number | null; quantity: number; winery: string | null}>
+      if (Array.isArray(existing)) {
+        const match = existing.find(w =>
+          w.name.toLowerCase() === form.name.trim().toLowerCase() &&
+          (form.vintage ? w.vintage === parseInt(form.vintage) : w.vintage === null) &&
+          (form.winery ? w.winery?.toLowerCase() === form.winery.trim().toLowerCase() : true)
+        )
+        if (match) {
+          const confirmed = confirm(
+            `"${match.name}${form.vintage ? ` ${form.vintage}` : ''}" is already in your cellar (${match.quantity} bottle${match.quantity !== 1 ? 's' : ''}).\n\nAdd 1 more bottle to the existing entry?`
+          )
+          if (confirmed) {
+            await fetch(`/api/wines/${match.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ quantity: match.quantity + 1 }),
+            })
+            router.push('/cellar')
+            return
+          }
+          // User chose to create a new separate entry — fall through
+        }
+      }
+
       const res = await fetch('/api/wines', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

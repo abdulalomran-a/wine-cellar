@@ -7,10 +7,32 @@ interface Props {
   wine: Wine
   onDelete: (id: string) => void
   onEdit: (wine: Wine) => void
+  onQuantityChange: (id: string, quantity: number) => void
 }
 
-export default function WineCard({ wine, onDelete, onEdit }: Props) {
+export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: Props) {
   const [imgError, setImgError] = useState(false)
+  const [qty, setQty] = useState(wine.quantity)
+  const [updating, setUpdating] = useState(false)
+
+  async function changeQty(delta: number) {
+    const next = qty + delta
+    if (next < 0) return
+    setQty(next)
+    setUpdating(true)
+    try {
+      await fetch(`/api/wines/${wine.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: next }),
+      })
+      onQuantityChange(wine.id, next)
+    } catch {
+      setQty(qty) // rollback
+    } finally {
+      setUpdating(false)
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow overflow-hidden flex">
@@ -77,15 +99,37 @@ export default function WineCard({ wine, onDelete, onEdit }: Props) {
           )}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-          <span>{wine.location}</span>
-          <span>Qty: {wine.quantity}</span>
-          {wine.rating && (
-            <span className="text-amber-600 font-medium">{wine.rating}/5</span>
-          )}
-          {wine.purchase_price && (
-            <span>{wine.purchase_price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
-          )}
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+            <span>{wine.location}</span>
+            {wine.rating && (
+              <span className="text-amber-600 font-medium">{wine.rating}/5</span>
+            )}
+            {wine.purchase_price && (
+              <span>{wine.purchase_price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+            )}
+          </div>
+
+          {/* Quantity controls */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => changeQty(-1)}
+              disabled={updating || qty <= 0}
+              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-base font-medium leading-none"
+            >
+              −
+            </button>
+            <span className={`w-8 text-center text-sm font-semibold tabular-nums ${qty === 0 ? 'text-red-500' : 'text-gray-900'}`}>
+              {qty}
+            </span>
+            <button
+              onClick={() => changeQty(1)}
+              disabled={updating}
+              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-base font-medium leading-none"
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
     </div>

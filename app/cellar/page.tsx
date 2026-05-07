@@ -12,7 +12,7 @@ export default function CellarPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
-  const [sortBy, setSortBy] = useState<'name' | 'vintage' | 'added'>('added')
+  const [sortBy, setSortBy] = useState<'name' | 'vintage' | 'added' | 'winery'>('added')
 
   useEffect(() => {
     fetch('/api/wines')
@@ -31,7 +31,12 @@ export default function CellarPage() {
     router.push(`/add?id=${wine.id}`)
   }
 
+  function handleQuantityChange(id: string, quantity: number) {
+    setWines(prev => prev.map(w => w.id === id ? { ...w, quantity } : w))
+  }
+
   const locations = [...new Set(wines.map(w => w.location))].sort()
+  const totalBottles = wines.reduce((s, w) => s + w.quantity, 0)
 
   const filtered = wines
     .filter(w => {
@@ -44,8 +49,23 @@ export default function CellarPage() {
     .sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name)
       if (sortBy === 'vintage') return (b.vintage ?? 0) - (a.vintage ?? 0)
+      if (sortBy === 'winery') {
+        const cmp = (a.winery ?? a.name).localeCompare(b.winery ?? b.name)
+        return cmp !== 0 ? cmp : (a.vintage ?? 0) - (b.vintage ?? 0)
+      }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
+
+  // Group by winery when that sort is selected
+  const grouped: { label: string; wines: Wine[] }[] = []
+  if (sortBy === 'winery') {
+    filtered.forEach(w => {
+      const key = w.winery || w.name
+      const existing = grouped.find(g => g.label === key)
+      if (existing) existing.wines.push(w)
+      else grouped.push({ label: key, wines: [w] })
+    })
+  }
 
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
 
@@ -54,7 +74,7 @@ export default function CellarPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Cellar</h1>
-          <p className="text-gray-500 text-sm mt-1">{wines.length} wines · {wines.reduce((s, w) => s + w.quantity, 0)} bottles</p>
+          <p className="text-gray-500 text-sm mt-1">{wines.length} wines · {totalBottles} bottles</p>
         </div>
         <Link href="/add" className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
           Add Wine
@@ -87,6 +107,7 @@ export default function CellarPage() {
             <option value="added">Recently Added</option>
             <option value="name">Name A–Z</option>
             <option value="vintage">Vintage</option>
+            <option value="winery">Group by Winery</option>
           </select>
         </div>
       </div>
@@ -98,10 +119,30 @@ export default function CellarPage() {
             : <p>No wines match your search.</p>
           }
         </div>
+      ) : sortBy === 'winery' ? (
+        // Grouped view
+        <div className="space-y-4">
+          {grouped.map(group => (
+            <div key={group.label}>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <h2 className="font-semibold text-gray-700 text-sm">{group.label}</h2>
+                <span className="text-xs text-gray-400">
+                  {group.wines.reduce((s, w) => s + w.quantity, 0)} bottles · {group.wines.length} vintage{group.wines.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {group.wines.map(w => (
+                  <WineCard key={w.id} wine={w} onDelete={handleDelete} onEdit={handleEdit} onQuantityChange={handleQuantityChange} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
+        // Flat list
         <div className="space-y-2">
           {filtered.map(w => (
-            <WineCard key={w.id} wine={w} onDelete={handleDelete} onEdit={handleEdit} />
+            <WineCard key={w.id} wine={w} onDelete={handleDelete} onEdit={handleEdit} onQuantityChange={handleQuantityChange} />
           ))}
         </div>
       )}
