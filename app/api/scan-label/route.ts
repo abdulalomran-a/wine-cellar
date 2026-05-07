@@ -24,16 +24,23 @@ export async function POST(req: NextRequest) {
             },
             {
               type: 'text',
-              text: `You are a wine label expert. Extract wine information from this label photo and return ONLY valid JSON with these exact fields (use null if not visible):
+              text: `You are a wine label expert. Carefully read every word on this wine label and extract ONLY what is literally printed on it.
+
+Return ONLY valid JSON with these exact fields (use null if not clearly visible):
 {
-  "name": "wine name/cuvee",
-  "winery": "producer/chateau/winery name",
-  "vintage": year as integer or null,
-  "varietal": "grape variety",
-  "region": "wine region/appellation",
+  "name": "the cuvee or wine name exactly as printed (NOT the winery name)",
+  "winery": "the producer, chateau, domaine, or winery name exactly as printed",
+  "vintage": year as integer (4-digit year) or null,
+  "varietal": "grape variety or blend (e.g. Cabernet Sauvignon, Bordeaux Blend)",
+  "region": "the appellation or wine region (e.g. Pauillac, Napa Valley)",
   "country": "country of origin"
 }
-Return only the JSON object, no other text.`,
+
+Important rules:
+- "name" is the specific wine/cuvee name, NOT the winery. Many wines don't have a separate cuvee name — in that case use the appellation or leave as the winery name only if that's all there is.
+- "winery" is the producer. For French chateaux, include the full "Chateau X" name.
+- Be precise — do not invent or guess details not on the label.
+- Return only the JSON object, no other text.`,
             },
           ],
         },
@@ -59,6 +66,7 @@ Return only the JSON object, no other text.`,
       vivino_rating: vivino?.rating ?? null,
       vivino_price: vivino?.price ?? null,
       vivino_url: vivino?.url ?? null,
+      vivino_wine_name: vivino?.wine_name ?? null,
     })
   } catch (err) {
     console.error('scan-label error:', err)
