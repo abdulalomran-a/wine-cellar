@@ -53,6 +53,10 @@ function LoginForm() {
               placeholder="Enter password"
               autoFocus
               required
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="current-password"
+              spellCheck={false}
               className="input"
             />
           </div>

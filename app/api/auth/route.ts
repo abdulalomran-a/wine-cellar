@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { makeToken } from '@/middleware'
+import { makeToken } from '@/lib/auth'
 
 const COOKIE = 'wine_session'
 const MAX_AGE = 60 * 60 * 24 * 30 // 30 days
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true })
   res.cookies.set(COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'lax',
     maxAge: MAX_AGE,
     path: '/',
