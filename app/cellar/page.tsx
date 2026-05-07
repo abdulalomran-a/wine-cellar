@@ -13,6 +13,8 @@ export default function CellarPage() {
   const [search, setSearch] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'vintage' | 'added' | 'winery'>('added')
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/wines')
@@ -33,6 +35,29 @@ export default function CellarPage() {
 
   function handleQuantityChange(id: string, quantity: number) {
     setWines(prev => prev.map(w => w.id === id ? { ...w, quantity } : w))
+  }
+
+  async function handleBackfill() {
+    setBackfilling(true)
+    setBackfillMsg(null)
+    try {
+      const res = await fetch('/api/backfill-images', { method: 'POST' })
+      const { updated, total } = await res.json()
+      if (total === 0) {
+        setBackfillMsg('All wines already have photos.')
+      } else if (updated === 0) {
+        setBackfillMsg(`Searched ${total} wines — no photos found online.`)
+      } else {
+        setBackfillMsg(`Found photos for ${updated} of ${total} wines. Refreshing...`)
+        // Reload wines to show new images
+        const data = await fetch('/api/wines').then(r => r.json())
+        setWines(Array.isArray(data) ? data : [])
+      }
+    } catch {
+      setBackfillMsg('Something went wrong. Please try again.')
+    } finally {
+      setBackfilling(false)
+    }
   }
 
   const locations = [...new Set(wines.map(w => w.location))].sort()
@@ -76,10 +101,25 @@ export default function CellarPage() {
           <h1 className="text-2xl font-bold text-gray-900">My Cellar</h1>
           <p className="text-gray-500 text-sm mt-1">{wines.length} wines · {totalBottles} bottles</p>
         </div>
-        <Link href="/add" className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
-          Add Wine
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={handleBackfill}
+            disabled={backfilling}
+            className="px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            {backfilling ? 'Searching...' : 'Find Photos'}
+          </button>
+          <Link href="/add" className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
+            Add Wine
+          </Link>
+        </div>
       </div>
+
+      {backfillMsg && (
+        <div className="bg-blue-50 border border-blue-100 text-blue-700 text-sm rounded-xl px-4 py-3">
+          {backfillMsg}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-2">
