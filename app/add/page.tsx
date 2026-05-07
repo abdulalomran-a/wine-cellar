@@ -42,6 +42,7 @@ function AddWineForm() {
   const [showScanner, setShowScanner] = useState(false)
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
   const [labelState, setLabelState] = useState<'idle' | 'loading' | 'found' | 'error'>('idle')
+  const [vivinoState, setVivinoState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
   const [labelPreview, setLabelPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -142,20 +143,50 @@ function AddWineForm() {
         })
         const data = await res.json()
         if (data.found) {
+          const scannedName = data.name || ''
+          const scannedWinery = data.winery || ''
+          const scannedVintage = data.vintage?.toString() || ''
+
           setForm(prev => ({
             ...prev,
-            name: data.name || prev.name,
-            winery: data.winery || prev.winery,
-            vintage: data.vintage?.toString() || prev.vintage,
+            name: scannedName || prev.name,
+            winery: scannedWinery || prev.winery,
+            vintage: scannedVintage || prev.vintage,
             varietal: data.varietal || prev.varietal,
             region: data.region || prev.region,
             country: data.country || prev.country,
-            vivino_rating: data.vivino_rating?.toString() || prev.vivino_rating,
-            vivino_price: data.vivino_price?.toString() || prev.vivino_price,
-            vivino_url: data.vivino_url || prev.vivino_url,
             // Keep the user's own label photo — don't overwrite with search result
           }))
           setLabelState('found')
+
+          // Now fetch Vivino data separately (can take up to 60s)
+          if (scannedName) {
+            setVivinoState('loading')
+            fetch('/api/vivino-lookup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: scannedName,
+                winery: scannedWinery || null,
+                vintage: scannedVintage ? parseInt(scannedVintage) : null,
+              }),
+            })
+              .then(r => r.json())
+              .then(vd => {
+                if (vd.vivino_rating || vd.vivino_price || vd.vivino_url) {
+                  setForm(prev => ({
+                    ...prev,
+                    vivino_rating: vd.vivino_rating?.toString() || prev.vivino_rating,
+                    vivino_price: vd.vivino_price?.toString() || prev.vivino_price,
+                    vivino_url: vd.vivino_url || prev.vivino_url,
+                  }))
+                  setVivinoState('found')
+                } else {
+                  setVivinoState('notfound')
+                }
+              })
+              .catch(() => setVivinoState('notfound'))
+          }
         } else {
           setLabelState('error')
         }
@@ -301,11 +332,21 @@ function AddWineForm() {
         )}
 
         {labelState === 'found' && (
-          <p className="text-sm text-green-700">
-            Label recognised
-            {form.vivino_rating ? ` · Vivino ${form.vivino_rating}` : ''}
-            {form.vivino_price ? ` · €${form.vivino_price}` : ''}
-          </p>
+          <div className="space-y-1">
+            <p className="text-sm text-green-700">Label recognised ✓</p>
+            {vivinoState === 'loading' && (
+              <p className="text-sm text-gray-500">Fetching Vivino rating…</p>
+            )}
+            {vivinoState === 'found' && (
+              <p className="text-sm text-red-600 font-medium">
+                Vivino {form.vivino_rating ?? ''}
+                {form.vivino_price ? ` · €${form.vivino_price}` : ''}
+              </p>
+            )}
+            {vivinoState === 'notfound' && (
+              <p className="text-sm text-gray-400">Not found on Vivino — you can enter manually below.</p>
+            )}
+          </div>
         )}
         {labelState === 'error' && (
           <p className="text-sm text-amber-700">Could not read label — fill in details manually.</p>

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { findWineImage } from '@/lib/wine-image'
-import { fetchVivinoData } from '@/lib/vivino'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -10,7 +8,6 @@ export async function POST(req: NextRequest) {
     const { image, mediaType } = await req.json()
     if (!image) return NextResponse.json({ error: 'No image provided' }, { status: 400 })
 
-    // Step 1: Claude reads the label
     const message = await client.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 512,
@@ -37,7 +34,7 @@ Return ONLY valid JSON with these exact fields (use null if not clearly visible)
 }
 
 Important rules:
-- "name" is the specific wine/cuvee name, NOT the winery. Many wines don't have a separate cuvee name — in that case use the appellation or leave as the winery name only if that's all there is.
+- "name" is the specific wine/cuvee name, NOT the winery. Many wines don't have a separate cuvee name — in that case use the appellation or the winery name if that's all there is.
 - "winery" is the producer. For French chateaux, include the full "Chateau X" name.
 - Be precise — do not invent or guess details not on the label.
 - Return only the JSON object, no other text.`,
@@ -53,21 +50,7 @@ Important rules:
 
     const wine = JSON.parse(jsonMatch[0])
 
-    // Step 2: Fetch wine image + Vivino data in parallel
-    const [image_url, vivino] = await Promise.all([
-      findWineImage(wine.name, wine.winery),
-      fetchVivinoData(wine.name, wine.winery, wine.vintage),
-    ])
-
-    return NextResponse.json({
-      found: true,
-      ...wine,
-      image_url,
-      vivino_rating: vivino?.rating ?? null,
-      vivino_price: vivino?.price ?? null,
-      vivino_url: vivino?.url ?? null,
-      vivino_wine_name: vivino?.wine_name ?? null,
-    })
+    return NextResponse.json({ found: true, ...wine })
   } catch (err) {
     console.error('scan-label error:', err)
     return NextResponse.json({ error: 'Failed to scan label' }, { status: 500 })
