@@ -244,10 +244,10 @@ function AddWineForm() {
         </p>
       </div>
 
-      {/* Label photo scan (Vivino-style) */}
+      {/* Photo section */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-        <h2 className="font-semibold text-gray-800">Scan Label</h2>
-        <p className="text-xs text-gray-500">Point your camera at the wine label and Claude will identify the wine</p>
+        <h2 className="font-semibold text-gray-800">{editId ? 'Photo' : 'Scan Label'}</h2>
+        {!editId && <p className="text-xs text-gray-500">Take a photo of the label — Claude will read the wine details automatically</p>}
 
         <input
           ref={labelInputRef}
@@ -257,27 +257,41 @@ function AddWineForm() {
           onChange={handleLabelPhoto}
         />
 
-        <button
-          type="button"
-          onClick={() => labelInputRef.current?.click()}
-          disabled={labelState === 'loading'}
-          className="w-full py-3 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
-        >
-          {labelState === 'loading' ? 'Reading label...' : 'Take Photo or Upload'}
-        </button>
+        {/* Show existing photo when editing, or preview after capture */}
+        {(form.image_url && !imgError) || labelPreview ? (
+          <div className="space-y-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={labelPreview || form.image_url}
+              alt="Bottle photo"
+              className="w-full max-h-64 object-cover rounded-xl border border-gray-100 shadow-sm"
+              onError={() => setImgError(true)}
+            />
+            <button
+              type="button"
+              onClick={() => labelInputRef.current?.click()}
+              disabled={labelState === 'loading'}
+              className="w-full py-2 border border-gray-300 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+            >
+              {labelState === 'loading' ? 'Reading label...' : 'Change Photo'}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => labelInputRef.current?.click()}
+            disabled={labelState === 'loading'}
+            className="w-full py-3 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
+          >
+            {labelState === 'loading' ? 'Reading label...' : 'Take Photo or Upload'}
+          </button>
+        )}
 
         {labelState === 'found' && (
           <p className="text-sm text-green-700">Label recognised — details filled in below.</p>
         )}
         {labelState === 'error' && (
-          <p className="text-sm text-amber-700">Could not read label — please fill in details manually.</p>
-        )}
-
-        {labelPreview && (
-          <div className="flex justify-center pt-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={labelPreview} alt="Label photo" className="max-h-48 object-contain rounded-lg border border-gray-100 shadow-sm" />
-          </div>
+          <p className="text-sm text-amber-700">Could not read label — fill in details manually.</p>
         )}
       </div>
 
@@ -319,18 +333,6 @@ function AddWineForm() {
           <p className="text-sm text-amber-700">Not found in database — fill in details below.</p>
         )}
 
-        {/* Bottle photo preview */}
-        {form.image_url && !imgError && (
-          <div className="flex justify-center pt-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={form.image_url}
-              alt="Bottle label"
-              className="max-h-64 object-contain rounded-lg border border-gray-100 shadow-sm"
-              onError={() => setImgError(true)}
-            />
-          </div>
-        )}
       </div>
 
       {/* Wine details form */}
