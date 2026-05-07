@@ -43,6 +43,7 @@ function AddWineForm() {
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
   const [labelState, setLabelState] = useState<'idle' | 'loading' | 'found' | 'error'>('idle')
   const [vivinoState, setVivinoState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
+  const [vivinoUrlState, setVivinoUrlState] = useState<'idle' | 'loading' | 'found' | 'error'>('idle')
   const [labelPreview, setLabelPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -211,6 +212,31 @@ function AddWineForm() {
       }
       img.src = dataUrl
     })
+  }
+
+  async function fetchFromVivinoUrl() {
+    if (!form.vivino_url.trim()) return
+    setVivinoUrlState('loading')
+    try {
+      const res = await fetch('/api/vivino-from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: form.vivino_url.trim() }),
+      })
+      const data = await res.json()
+      if (data.rating || data.price) {
+        setForm(prev => ({
+          ...prev,
+          vivino_rating: data.rating?.toString() || prev.vivino_rating,
+          vivino_price: data.price?.toString() || prev.vivino_price,
+        }))
+        setVivinoUrlState('found')
+      } else {
+        setVivinoUrlState('error')
+      }
+    } catch {
+      setVivinoUrlState('error')
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -477,16 +503,32 @@ function AddWineForm() {
               rel="noopener noreferrer"
               className="text-xs text-red-600 hover:underline font-medium"
             >
-              Search on Vivino →
+              Find on Vivino →
             </a>
           </div>
-          <input
-            type="url"
-            value={form.vivino_url}
-            onChange={e => set('vivino_url', e.target.value)}
-            placeholder="Paste Vivino URL (optional)"
-            className="input text-sm"
-          />
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={form.vivino_url}
+              onChange={e => { set('vivino_url', e.target.value); setVivinoUrlState('idle') }}
+              placeholder="Paste Vivino wine URL…"
+              className="input text-sm flex-1"
+            />
+            <button
+              type="button"
+              onClick={fetchFromVivinoUrl}
+              disabled={!form.vivino_url.trim() || vivinoUrlState === 'loading'}
+              className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 whitespace-nowrap"
+            >
+              {vivinoUrlState === 'loading' ? '…' : 'Fetch'}
+            </button>
+          </div>
+          {vivinoUrlState === 'found' && (
+            <p className="text-xs text-green-700">✓ Rating and price updated from Vivino</p>
+          )}
+          {vivinoUrlState === 'error' && (
+            <p className="text-xs text-amber-700">Could not read that page — enter rating manually below.</p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Vivino Rating">
               <input type="number" value={form.vivino_rating} onChange={e => set('vivino_rating', e.target.value)}
