@@ -150,6 +150,9 @@ function AddWineForm() {
             varietal: data.varietal || prev.varietal,
             region: data.region || prev.region,
             country: data.country || prev.country,
+            vivino_rating: data.vivino_rating?.toString() || prev.vivino_rating,
+            vivino_price: data.vivino_price?.toString() || prev.vivino_price,
+            vivino_url: data.vivino_url || prev.vivino_url,
             // Keep the user's own label photo — don't overwrite with search result
           }))
           setLabelState('found')
@@ -298,7 +301,11 @@ function AddWineForm() {
         )}
 
         {labelState === 'found' && (
-          <p className="text-sm text-green-700">Label recognised — details filled in below.</p>
+          <p className="text-sm text-green-700">
+            Label recognised
+            {form.vivino_rating ? ` · Vivino ${form.vivino_rating}` : ''}
+            {form.vivino_price ? ` · €${form.vivino_price}` : ''}
+          </p>
         )}
         {labelState === 'error' && (
           <p className="text-sm text-amber-700">Could not read label — fill in details manually.</p>
