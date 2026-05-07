@@ -197,7 +197,6 @@ function AddWineForm() {
           ref={labelInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           onChange={handleLabelPhoto}
         />
@@ -208,7 +207,7 @@ function AddWineForm() {
           disabled={labelState === 'loading'}
           className="w-full py-3 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
         >
-          {labelState === 'loading' ? 'Reading label...' : 'Take Label Photo'}
+          {labelState === 'loading' ? 'Reading label...' : 'Take Photo or Upload'}
         </button>
 
         {labelState === 'found' && (
