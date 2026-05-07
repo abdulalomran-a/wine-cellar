@@ -15,11 +15,10 @@ type Filters = {
   region: string
   varietal: string
   country: string
-  minQty: string
-  maxQty: string
+  qtySort: string
 }
 
-const EMPTY_FILTERS: Filters = { vintage: '', region: '', varietal: '', country: '', minQty: '', maxQty: '' }
+const EMPTY_FILTERS: Filters = { vintage: '', region: '', varietal: '', country: '', qtySort: '' }
 
 export default function Dashboard() {
   const [wines, setWines] = useState<Wine[]>([])
@@ -46,15 +45,18 @@ export default function Dashboard() {
   const varietals = useMemo(() => [...new Set(wines.map(w => w.varietal).filter(Boolean))].sort(), [wines])
   const countries = useMemo(() => [...new Set(wines.map(w => w.country).filter(Boolean))].sort(), [wines])
 
-  const filtered = useMemo(() => wines.filter(w => {
-    if (filters.vintage && w.vintage !== parseInt(filters.vintage)) return false
-    if (filters.region && w.region !== filters.region) return false
-    if (filters.varietal && w.varietal !== filters.varietal) return false
-    if (filters.country && w.country !== filters.country) return false
-    if (filters.minQty && w.quantity < parseInt(filters.minQty)) return false
-    if (filters.maxQty && w.quantity > parseInt(filters.maxQty)) return false
-    return true
-  }), [wines, filters])
+  const filtered = useMemo(() => {
+    const list = wines.filter(w => {
+      if (filters.vintage && w.vintage !== parseInt(filters.vintage)) return false
+      if (filters.region && w.region !== filters.region) return false
+      if (filters.varietal && w.varietal !== filters.varietal) return false
+      if (filters.country && w.country !== filters.country) return false
+      return true
+    })
+    if (filters.qtySort === 'desc') list.sort((a, b) => b.quantity - a.quantity)
+    if (filters.qtySort === 'asc') list.sort((a, b) => a.quantity - b.quantity)
+    return list
+  }, [wines, filters])
 
   // Stats derived from filtered wines
   const totalBottles = filtered.reduce((sum, w) => sum + w.quantity, 0)
@@ -172,26 +174,13 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-500">Quantity range</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={0}
-                value={filters.minQty}
-                onChange={e => setFilter('minQty', e.target.value)}
-                placeholder="Min"
-                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500"
-              />
-              <span className="text-gray-400 text-sm">–</span>
-              <input
-                type="number"
-                min={0}
-                value={filters.maxQty}
-                onChange={e => setFilter('maxQty', e.target.value)}
-                placeholder="Max"
-                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
+            <label className="text-xs font-medium text-gray-500">Sort by Quantity</label>
+            <select value={filters.qtySort} onChange={e => setFilter('qtySort', e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500">
+              <option value="">No sort</option>
+              <option value="desc">Most bottles first</option>
+              <option value="asc">Fewest bottles first</option>
+            </select>
           </div>
         </div>
       )}
