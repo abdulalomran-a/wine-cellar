@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import Link from 'next/link'
 import BottomNav from '@/components/BottomNav'
+import SignOutButton from '@/components/SignOutButton'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -48,14 +49,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/add" className="px-3 py-1.5 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700">
                 Add Wine
               </Link>
+              <SignOutButton className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:bg-gray-100" />
             </nav>
           </div>
         </header>
 
         {/* Mobile header */}
         <header className="sm:hidden bg-white border-b border-gray-200 sticky top-0 z-40">
-          <div className="px-4 h-12 flex items-center">
+          <div className="px-4 h-12 flex items-center justify-between">
             <span className="font-bold text-purple-700 text-base tracking-tight">Wine Cellar</span>
+            <SignOutButton className="text-xs text-gray-400 hover:text-gray-600" />
           </div>
         </header>
 
