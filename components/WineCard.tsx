@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Wine } from '@/lib/supabase'
 
 interface Props {
@@ -13,25 +13,24 @@ interface Props {
 export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: Props) {
   const [imgError, setImgError] = useState(false)
   const [qty, setQty] = useState(wine.quantity)
-  const [updating, setUpdating] = useState(false)
+  const pendingQty = useRef(wine.quantity)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function changeQty(delta: number) {
-    const next = qty + delta
-    if (next < 0) return
+  function changeQty(delta: number) {
+    const next = Math.max(0, pendingQty.current + delta)
+    pendingQty.current = next
     setQty(next)
-    setUpdating(true)
-    try {
-      await fetch(`/api/wines/${wine.id}`, {
+    onQuantityChange(wine.id, next)
+
+    // Debounce the API call — only fires 600ms after the last tap
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      fetch(`/api/wines/${wine.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: next }),
-      })
-      onQuantityChange(wine.id, next)
-    } catch {
-      setQty(qty) // rollback
-    } finally {
-      setUpdating(false)
-    }
+      }).catch(() => {})
+    }, 600)
   }
 
   return (
@@ -114,7 +113,7 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => changeQty(-1)}
-              disabled={updating || qty <= 0}
+              disabled={qty <= 0}
               className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-base font-medium leading-none"
             >
               −
@@ -124,8 +123,7 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
             </span>
             <button
               onClick={() => changeQty(1)}
-              disabled={updating}
-              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-base font-medium leading-none"
+              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-base font-medium leading-none"
             >
               +
             </button>

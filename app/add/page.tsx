@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense, useRef } from 'react'
+import { useState, Suspense, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import LocationSelect from '@/components/LocationSelect'
@@ -33,6 +33,7 @@ const EMPTY: WineForm = {
 function AddWineForm() {
   const router = useRouter()
   const params = useSearchParams()
+  const editId = params.get('id')
   const [form, setForm] = useState<WineForm>({ ...EMPTY, barcode: params.get('barcode') ?? '' })
   const [showScanner, setShowScanner] = useState(false)
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
@@ -41,7 +42,34 @@ function AddWineForm() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [imgError, setImgError] = useState(false)
+  const [loadingEdit, setLoadingEdit] = useState(!!editId)
   const labelInputRef = useRef<HTMLInputElement>(null)
+
+  // Load existing wine data when editing
+  useEffect(() => {
+    if (!editId) return
+    fetch(`/api/wines/${editId}`)
+      .then(r => r.json())
+      .then(w => {
+        setForm({
+          name: w.name ?? '',
+          winery: w.winery ?? '',
+          vintage: w.vintage?.toString() ?? '',
+          varietal: w.varietal ?? '',
+          region: w.region ?? '',
+          country: w.country ?? '',
+          location: w.location ?? '',
+          quantity: w.quantity?.toString() ?? '1',
+          purchase_price: w.purchase_price?.toString() ?? '',
+          purchase_date: w.purchase_date ?? '',
+          notes: w.notes ?? '',
+          barcode: w.barcode ?? '',
+          image_url: w.image_url ?? '',
+          rating: w.rating ?? 0,
+        })
+      })
+      .finally(() => setLoadingEdit(false))
+  }, [editId])
 
   function set(field: keyof WineForm, value: string | number) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -128,8 +156,8 @@ function AddWineForm() {
     setSaving(true)
     setError(null)
     try {
-      // Check for existing wine with same name + vintage
-      const existing = await fetch('/api/wines').then(r => r.json()) as Array<{id: string; name: string; vintage: number | null; quantity: number; winery: string | null}>
+      // Check for existing wine with same name + vintage (skip when editing)
+      const existing = editId ? [] : await fetch('/api/wines').then(r => r.json()) as Array<{id: string; name: string; vintage: number | null; quantity: number; winery: string | null}>
       if (Array.isArray(existing)) {
         const match = existing.find(w =>
           w.name.toLowerCase() === form.name.trim().toLowerCase() &&
@@ -153,25 +181,27 @@ function AddWineForm() {
         }
       }
 
-      const res = await fetch('/api/wines', {
-        method: 'POST',
+      const payload = {
+        name: form.name.trim(),
+        winery: form.winery || null,
+        vintage: form.vintage ? parseInt(form.vintage) : null,
+        varietal: form.varietal || null,
+        region: form.region || null,
+        country: form.country || null,
+        location: form.location,
+        quantity: parseInt(form.quantity) || 1,
+        purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
+        purchase_date: form.purchase_date || null,
+        notes: form.notes || null,
+        barcode: form.barcode || null,
+        image_url: form.image_url || null,
+        rating: form.rating || null,
+      }
+
+      const res = await fetch(editId ? `/api/wines/${editId}` : '/api/wines', {
+        method: editId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          winery: form.winery || null,
-          vintage: form.vintage ? parseInt(form.vintage) : null,
-          varietal: form.varietal || null,
-          region: form.region || null,
-          country: form.country || null,
-          location: form.location,
-          quantity: parseInt(form.quantity) || 1,
-          purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
-          purchase_date: form.purchase_date || null,
-          notes: form.notes || null,
-          barcode: form.barcode || null,
-          image_url: form.image_url || null,
-          rating: form.rating || null,
-        }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Failed to save')
       router.push('/cellar')
@@ -181,11 +211,15 @@ function AddWineForm() {
     }
   }
 
+  if (loadingEdit) return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Add Wine</h1>
-        <p className="text-gray-500 text-sm mt-1">Scan the label or barcode to auto-fill, or enter manually</p>
+        <h1 className="text-2xl font-bold text-gray-900">{editId ? 'Edit Wine' : 'Add Wine'}</h1>
+        <p className="text-gray-500 text-sm mt-1">
+          {editId ? 'Update the details below' : 'Scan the label or barcode to auto-fill, or enter manually'}
+        </p>
       </div>
 
       {/* Label photo scan (Vivino-style) */}
@@ -372,7 +406,7 @@ function AddWineForm() {
             disabled={saving || !form.name.trim() || !form.location}
             className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save Wine'}
+            {saving ? 'Saving...' : editId ? 'Update Wine' : 'Save Wine'}
           </button>
         </div>
       </form>
