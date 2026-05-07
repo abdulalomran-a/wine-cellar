@@ -5,7 +5,7 @@ import { Wine } from '@/lib/supabase'
 import Link from 'next/link'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, Legend
 } from 'recharts'
 
 const COLORS = ['#7c3aed', '#a855f7', '#c084fc', '#e879f9', '#f0abfc', '#ddd6fe']
@@ -70,13 +70,17 @@ export default function Dashboard() {
   filtered.forEach(w => { locationMap[w.location] = (locationMap[w.location] ?? 0) + w.quantity })
   const locationData = Object.entries(locationMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
 
-  const varietalMap: Record<string, number> = {}
-  filtered.forEach(w => { const v = w.varietal ?? 'Unknown'; varietalMap[v] = (varietalMap[v] ?? 0) + w.quantity })
-  const varietalData = Object.entries(varietalMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6)
-
   const vintageMap: Record<string, number> = {}
-  filtered.forEach(w => { if (w.vintage) { const d = `${Math.floor(w.vintage / 10) * 10}s`; vintageMap[d] = (vintageMap[d] ?? 0) + w.quantity } })
-  const vintageData = Object.entries(vintageMap).sort((a, b) => a[0].localeCompare(b[0])).map(([name, value]) => ({ name, value }))
+  filtered.forEach(w => { if (w.vintage) { vintageMap[String(w.vintage)] = (vintageMap[String(w.vintage)] ?? 0) + w.quantity } })
+  const vintageData = Object.entries(vintageMap).sort((a, b) => Number(a[0]) - Number(b[0])).map(([name, value]) => ({ name, value }))
+
+  const regionMap: Record<string, number> = {}
+  filtered.forEach(w => { if (w.region) { regionMap[w.region] = (regionMap[w.region] ?? 0) + w.quantity } })
+  const regionData = Object.entries(regionMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8)
+
+  const countryMap: Record<string, number> = {}
+  filtered.forEach(w => { if (w.country) { countryMap[w.country] = (countryMap[w.country] ?? 0) + w.quantity } })
+  const countryData = Object.entries(countryMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
 
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading your cellar...</div>
 
@@ -217,33 +221,14 @@ export default function Dashboard() {
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {varietalData.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-800 mb-3">By Varietal</h3>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={varietalData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}
-                      label={({ percent }: { percent?: number }) => percent != null ? `${(percent * 100).toFixed(0)}%` : ''} labelLine={false} fontSize={11}>
-                      {varietalData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip formatter={(v, n) => [v, n]} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
             {vintageData.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-800 mb-3">By Decade</h3>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={vintageData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#a855f7" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <PieCard title="By Vintage Year" data={vintageData} />
+            )}
+            {regionData.length > 0 && (
+              <PieCard title="By Region" data={regionData} />
+            )}
+            {countryData.length > 0 && (
+              <PieCard title="By Country" data={countryData} />
             )}
           </div>
 
@@ -283,6 +268,43 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
     <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-1">
       <div className="text-xs text-gray-500">{label}</div>
       <div className="text-2xl font-bold text-gray-900">{value}</div>
+    </div>
+  )
+}
+
+function PieCard({ title, data }: { title: string; data: { name: string; value: number }[] }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <h3 className="font-semibold text-gray-800 mb-1">{title}</h3>
+      <ResponsiveContainer width="100%" height={220}>
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={72}
+            innerRadius={28}
+            label={({ percent }: { percent?: number }) =>
+              percent != null && percent > 0.04 ? `${(percent * 100).toFixed(0)}%` : ''
+            }
+            labelLine={false}
+            fontSize={11}
+          >
+            {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+          </Pie>
+          <Tooltip formatter={(v, n) => [`${v} bottles`, n]} />
+          <Legend
+            iconType="circle"
+            iconSize={8}
+            formatter={(value: string) =>
+              value.length > 18 ? value.slice(0, 16) + '…' : value
+            }
+            wrapperStyle={{ fontSize: 11 }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
     </div>
   )
 }
