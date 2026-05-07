@@ -3,6 +3,12 @@
 import { useState, useRef } from 'react'
 import { Wine } from '@/lib/supabase'
 
+function vivinoUrl(wine: Wine): string {
+  if (wine.vivino_url) return wine.vivino_url
+  const q = [wine.winery, wine.name, wine.vintage].filter(Boolean).join(' ')
+  return `https://www.vivino.com/search/wines?q=${encodeURIComponent(q)}`
+}
+
 interface Props {
   wine: Wine
   onDelete: (id: string) => void
@@ -60,6 +66,14 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
             {wine.winery && <p className="text-sm text-gray-500 truncate">{wine.winery}</p>}
           </div>
           <div className="flex gap-1.5 flex-shrink-0">
+            <a
+              href={vivinoUrl(wine)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 text-xs border border-red-200 rounded-lg hover:bg-red-50 text-red-600 font-medium"
+            >
+              Vivino
+            </a>
             <button
               onClick={() => onEdit(wine)}
               className="px-2.5 py-1 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
@@ -104,7 +118,15 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
             {wine.rating && (
               <span className="text-amber-600 font-medium">{wine.rating}/5</span>
             )}
-            {wine.purchase_price && (
+            {wine.vivino_rating && (
+              <span className="text-red-600 font-medium">Vivino {wine.vivino_rating}</span>
+            )}
+            {wine.vivino_price && (
+              <span className="text-green-700 font-medium">
+                {wine.vivino_price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+              </span>
+            )}
+            {wine.purchase_price && !wine.vivino_price && (
               <span>{wine.purchase_price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
             )}
           </div>

@@ -22,12 +22,16 @@ type WineForm = {
   barcode: string
   image_url: string
   rating: number
+  vivino_url: string
+  vivino_rating: string
+  vivino_price: string
 }
 
 const EMPTY: WineForm = {
   name: '', winery: '', vintage: '', varietal: '', region: '',
   country: '', location: '', quantity: '1', purchase_price: '',
   purchase_date: '', notes: '', barcode: '', image_url: '', rating: 0,
+  vivino_url: '', vivino_rating: '', vivino_price: '',
 }
 
 function AddWineForm() {
@@ -66,6 +70,9 @@ function AddWineForm() {
           barcode: w.barcode ?? '',
           image_url: w.image_url ?? '',
           rating: w.rating ?? 0,
+          vivino_url: w.vivino_url ?? '',
+          vivino_rating: w.vivino_rating?.toString() ?? '',
+          vivino_price: w.vivino_price?.toString() ?? '',
         })
       })
       .finally(() => setLoadingEdit(false))
@@ -218,6 +225,9 @@ function AddWineForm() {
         barcode: form.barcode || null,
         image_url: form.image_url || null,
         rating: form.rating || null,
+        vivino_url: form.vivino_url || null,
+        vivino_rating: form.vivino_rating ? parseFloat(form.vivino_rating) : null,
+        vivino_price: form.vivino_price ? parseFloat(form.vivino_price) : null,
       }
 
       const res = await fetch(editId ? `/api/wines/${editId}` : '/api/wines', {
@@ -408,6 +418,38 @@ function AddWineForm() {
             ))}
           </div>
         </Field>
+
+        {/* Vivino */}
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Vivino</label>
+            <a
+              href={`https://www.vivino.com/search/wines?q=${encodeURIComponent([form.winery, form.name, form.vintage].filter(Boolean).join(' '))}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-red-600 hover:underline font-medium"
+            >
+              Search on Vivino →
+            </a>
+          </div>
+          <input
+            type="url"
+            value={form.vivino_url}
+            onChange={e => set('vivino_url', e.target.value)}
+            placeholder="Paste Vivino URL (optional)"
+            className="input text-sm"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Vivino Rating">
+              <input type="number" value={form.vivino_rating} onChange={e => set('vivino_rating', e.target.value)}
+                placeholder="e.g. 4.2" min={1} max={5} step={0.1} className="input" />
+            </Field>
+            <Field label="Vivino Price (EUR)">
+              <input type="number" value={form.vivino_price} onChange={e => set('vivino_price', e.target.value)}
+                placeholder="0.00" step={0.01} min={0} className="input" />
+            </Field>
+          </div>
+        </div>
 
         <Field label="Notes">
           <textarea value={form.notes} onChange={e => set('notes', e.target.value)}

@@ -21,6 +21,9 @@ export type Wine = {
   notes: string | null
   image_url: string | null
   rating: number | null
+  vivino_url: string | null
+  vivino_rating: number | null
+  vivino_price: number | null
   created_at: string
   updated_at: string
 }
