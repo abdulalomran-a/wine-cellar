@@ -42,7 +42,7 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
           <img
             src={wine.image_url}
             alt={wine.name}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
             style={{ maxHeight: 140 }}
             onError={() => setImgError(true)}
           />

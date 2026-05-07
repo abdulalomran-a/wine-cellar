@@ -118,6 +118,12 @@ function AddWineForm() {
     reader.onload = async () => {
       const dataUrl = reader.result as string
       setLabelPreview(dataUrl)
+
+      // Compress the photo and store it directly as the bottle image
+      const compressed = await compressImage(dataUrl)
+      setForm(prev => ({ ...prev, image_url: compressed }))
+      setImgError(false)
+
       const base64 = dataUrl.split(',')[1]
       const mediaType = file.type || 'image/jpeg'
 
@@ -137,7 +143,7 @@ function AddWineForm() {
             varietal: data.varietal || prev.varietal,
             region: data.region || prev.region,
             country: data.country || prev.country,
-            image_url: data.image_url || prev.image_url,
+            // Keep the user's own label photo — don't overwrite with search result
           }))
           setLabelState('found')
         } else {
@@ -148,6 +154,22 @@ function AddWineForm() {
       }
     }
     reader.readAsDataURL(file)
+  }
+
+  function compressImage(dataUrl: string): Promise<string> {
+    return new Promise(resolve => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX_W = 300, MAX_H = 420
+        const ratio = Math.min(MAX_W / img.width, MAX_H / img.height, 1)
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * ratio)
+        canvas.height = Math.round(img.height * ratio)
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.72))
+      }
+      img.src = dataUrl
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
