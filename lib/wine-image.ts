@@ -1,32 +1,31 @@
 export async function findWineImage(name: string, winery?: string | null): Promise<string | null> {
   if (!name) return null
 
-  const attempts = [
+  const queries = [
     [winery, name].filter(Boolean).join(' '),
     name,
-  ].filter((v, i, a) => a.indexOf(v) === i) // dedupe
+  ].filter((v, i, a) => a.indexOf(v) === i)
 
-  for (const query of attempts) {
-    // Try OFF v2 search with wine category filter
-    const img = await searchOFF(query, true) ?? await searchOFF(query, false)
+  for (const query of queries) {
+    const img = await searchOFFWinesOnly(query)
     if (img) return img
   }
 
   return null
 }
 
-async function searchOFF(query: string, wineCategory: boolean): Promise<string | null> {
+async function searchOFFWinesOnly(query: string): Promise<string | null> {
   try {
     const params = new URLSearchParams({
       q: query,
+      categories_tags_en: 'wines',  // strict wine category — no fallback to general
       fields: 'image_front_url,image_url,selected_images',
       page_size: '10',
     })
-    if (wineCategory) params.set('categories_tags_en', 'wines')
 
     const res = await fetch(
       `https://world.openfoodfacts.org/api/v2/search?${params}`,
-      { signal: AbortSignal.timeout(5000) }
+      { signal: AbortSignal.timeout(6000) }
     )
     if (!res.ok) return null
     const data = await res.json()
@@ -41,7 +40,7 @@ async function searchOFF(query: string, wineCategory: boolean): Promise<string |
       if (img) return img
     }
   } catch {
-    // timeout or network error — ignore
+    // timeout or network error
   }
   return null
 }

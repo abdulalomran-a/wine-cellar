@@ -42,14 +42,14 @@ export default function CellarPage() {
     setBackfillMsg(null)
     try {
       const res = await fetch('/api/backfill-images', { method: 'POST' })
-      const { updated, total } = await res.json()
-      if (total === 0) {
-        setBackfillMsg('All wines already have photos.')
-      } else if (updated === 0) {
-        setBackfillMsg(`Searched ${total} wines — no photos found online.`)
+      const { updated, cleared, total } = await res.json()
+      const parts = []
+      if (updated > 0) parts.push(`found photos for ${updated}`)
+      if (cleared > 0) parts.push(`removed ${cleared} wrong photo${cleared !== 1 ? 's' : ''}`)
+      if (parts.length === 0) {
+        setBackfillMsg(total === 0 ? 'No wines in cellar.' : `Searched ${total} wines — no matching photos found online.`)
       } else {
-        setBackfillMsg(`Found photos for ${updated} of ${total} wines. Refreshing...`)
-        // Reload wines to show new images
+        setBackfillMsg(`Done: ${parts.join(', ')} across ${total} wines. Refreshing...`)
         const data = await fetch('/api/wines').then(r => r.json())
         setWines(Array.isArray(data) ? data : [])
       }
