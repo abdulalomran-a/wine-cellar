@@ -115,6 +115,42 @@ function detectCategory(
     return { category: 'spirit', spirit_type: 'Other' }
   }
 
+  // Brand-based detection — when category tags are generic ("beverages")
+  // we can still recognize famous spirit brands by name.
+  const BRAND_TO_TYPE: Record<string, string> = {
+    // Vodka
+    'stolichnaya': 'Vodka', 'absolut': 'Vodka', 'smirnoff': 'Vodka', 'grey goose': 'Vodka',
+    'belvedere': 'Vodka', 'ketel one': 'Vodka', 'tito': 'Vodka', 'beluga': 'Vodka', 'cîroc': 'Vodka', 'ciroc': 'Vodka',
+    // Whisky / Scotch / Bourbon
+    'johnnie walker': 'Scotch', 'johnny walker': 'Scotch', 'macallan': 'Scotch', 'glenfiddich': 'Scotch',
+    'glenlivet': 'Scotch', 'laphroaig': 'Scotch', 'lagavulin': 'Scotch', 'highland park': 'Scotch',
+    'balvenie': 'Scotch', 'chivas': 'Scotch', 'dewar': 'Scotch', 'bowmore': 'Scotch', 'oban': 'Scotch',
+    'talisker': 'Scotch', 'ardbeg': 'Scotch', 'jameson': 'Whisky', 'tullamore': 'Whisky', 'redbreast': 'Whisky',
+    'jack daniel': 'Bourbon', 'jim beam': 'Bourbon', 'maker\'s mark': 'Bourbon', 'makers mark': 'Bourbon',
+    'woodford': 'Bourbon', 'wild turkey': 'Bourbon', 'bulleit': 'Bourbon', 'buffalo trace': 'Bourbon',
+    'crown royal': 'Whisky', 'suntory': 'Whisky', 'hibiki': 'Whisky', 'yamazaki': 'Whisky', 'nikka': 'Whisky',
+    // Gin
+    'tanqueray': 'Gin', 'bombay': 'Gin', 'hendrick': 'Gin', 'beefeater': 'Gin', 'monkey 47': 'Gin',
+    'gordon': 'Gin', 'plymouth': 'Gin',
+    // Rum
+    'bacardi': 'Rum', 'havana club': 'Rum', 'captain morgan': 'Rum', 'mount gay': 'Rum',
+    'diplomatico': 'Rum', 'zacapa': 'Rum', 'el dorado': 'Rum', 'kraken': 'Rum',
+    // Tequila / Mezcal
+    'patron': 'Tequila', 'patrón': 'Tequila', 'don julio': 'Tequila', 'jose cuervo': 'Tequila',
+    'casamigos': 'Tequila', 'clase azul': 'Tequila', 'herradura': 'Tequila', 'avion': 'Tequila',
+    'del maguey': 'Mezcal', 'montelobos': 'Mezcal',
+    // Cognac / Brandy
+    'hennessy': 'Cognac', 'remy martin': 'Cognac', 'rémy martin': 'Cognac', 'martell': 'Cognac',
+    'courvoisier': 'Cognac', 'camus': 'Cognac',
+    // Liqueur
+    'aperol': 'Liqueur', 'campari': 'Liqueur', 'cointreau': 'Liqueur', 'grand marnier': 'Liqueur',
+    'baileys': 'Liqueur', 'kahlua': 'Liqueur', 'amaretto': 'Liqueur', 'jagermeister': 'Liqueur',
+    'jägermeister': 'Liqueur', 'fernet': 'Liqueur', 'chartreuse': 'Liqueur',
+  }
+  for (const [brand, type] of Object.entries(BRAND_TO_TYPE)) {
+    if (t.includes(brand)) return { category: 'spirit', spirit_type: type }
+  }
+
   // Default to wine (most barcodes for our user)
   return { category: 'wine', spirit_type: null }
 }
