@@ -5,10 +5,11 @@ import { Wine } from '@/lib/supabase'
 import Link from 'next/link'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  PieChart, Pie, Cell, Legend, CartesianGrid,
 } from 'recharts'
 
-const COLORS = ['#7c3aed', '#a855f7', '#c084fc', '#e879f9', '#f0abfc', '#ddd6fe']
+// Neon palette: violet → fuchsia → cyan
+const COLORS = ['#a78bfa', '#c084fc', '#e879f9', '#f0abfc', '#67e8f9', '#22d3ee', '#818cf8', '#d946ef']
 
 type Filters = {
   vintage: string
@@ -39,7 +40,6 @@ export default function Dashboard() {
 
   const activeCount = Object.values(filters).filter(v => v !== '').length
 
-  // Build option lists from full wine list
   const vintages = useMemo(() => [...new Set(wines.map(w => w.vintage).filter(Boolean))].sort((a, b) => (b ?? 0) - (a ?? 0)), [wines])
   const regions = useMemo(() => [...new Set(wines.map(w => w.region).filter(Boolean))].sort(), [wines])
   const varietals = useMemo(() => [...new Set(wines.map(w => w.varietal).filter(Boolean))].sort(), [wines])
@@ -58,7 +58,6 @@ export default function Dashboard() {
     return list
   }, [wines, filters])
 
-  // Stats derived from filtered wines
   const totalBottles = filtered.reduce((sum, w) => sum + w.quantity, 0)
   const uniqueWineries = new Set(filtered.map(w => w.winery).filter(Boolean)).size
   const ratedWines = filtered.filter(w => w.rating)
@@ -82,14 +81,22 @@ export default function Dashboard() {
   filtered.forEach(w => { if (w.country) { countryMap[w.country] = (countryMap[w.country] ?? 0) + w.quantity } })
   const countryData = Object.entries(countryMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading your cellar...</div>
+  if (loading) {
+    return (
+      <div className="cyber-bg min-h-[80vh] flex items-center justify-center">
+        <div className="text-violet-200 text-sm tracking-widest uppercase animate-pulse">
+          Loading cellar
+        </div>
+      </div>
+    )
+  }
 
   if (wines.length === 0) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-xl font-semibold text-gray-700 mb-2">Your cellar is empty</h2>
-        <p className="text-gray-500 mb-6">Start by scanning a barcode or adding a wine manually.</p>
-        <Link href="/add" className="inline-flex px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium">
+      <div className="cyber-bg p-10 text-center">
+        <h2 className="text-2xl font-bold neon-text mb-3">Your cellar is empty</h2>
+        <p className="text-violet-300/70 mb-6">Start by scanning a bottle or adding a wine manually.</p>
+        <Link href="/add" className="cyber-btn inline-flex px-6 py-3 rounded-xl font-medium">
           Add your first wine
         </Link>
       </div>
@@ -97,11 +104,16 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="cyber-bg p-4 sm:p-6 -mx-4 sm:mx-0 space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 fade-up">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-fuchsia-400 pulse-dot" />
+            <span className="text-[11px] uppercase tracking-[0.2em] text-violet-300/70 font-medium">Live · Cellar</span>
+          </div>
+          <h1 className="text-3xl font-bold neon-text mt-1">Dashboard</h1>
+          <p className="text-violet-200/60 text-sm mt-1">
             {activeCount > 0
               ? `${filtered.length} of ${wines.length} wines · ${totalBottles} bottles`
               : 'Your wine collection at a glance'}
@@ -109,15 +121,15 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => setShowFilters(v => !v)}
-          className={`relative px-3 py-2 rounded-lg text-sm border transition-colors ${
+          className={`relative px-4 py-2 rounded-xl text-sm transition-all ${
             activeCount > 0
-              ? 'bg-purple-600 text-white border-purple-600'
-              : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              ? 'cyber-btn'
+              : 'glass glass-hover text-violet-200'
           }`}
         >
           Filter
           {activeCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-400 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-cyan-400 text-violet-950 text-[10px] font-bold rounded-full flex items-center justify-center shadow-[0_0_12px_rgba(34,211,238,0.7)]">
               {activeCount}
             </span>
           )}
@@ -126,13 +138,13 @@ export default function Dashboard() {
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+        <div className="glass p-4 space-y-3 fade-up">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-700">Filter wines</span>
+            <span className="text-xs uppercase tracking-widest text-violet-300/80 font-semibold">Filter wines</span>
             {activeCount > 0 && (
               <button
                 onClick={() => setFilters(EMPTY_FILTERS)}
-                className="text-xs text-purple-600 hover:underline"
+                className="text-xs text-cyan-300 hover:text-cyan-200"
               >
                 Clear all
               </button>
@@ -140,119 +152,91 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Vintage</label>
-              <select value={filters.vintage} onChange={e => setFilter('vintage', e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500">
-                <option value="">All vintages</option>
-                {vintages.map(v => <option key={v} value={v!}>{v}</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Country</label>
-              <select value={filters.country} onChange={e => setFilter('country', e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500">
-                <option value="">All countries</option>
-                {countries.map(c => <option key={c} value={c!}>{c}</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Region</label>
-              <select value={filters.region} onChange={e => setFilter('region', e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500">
-                <option value="">All regions</option>
-                {regions.map(r => <option key={r} value={r!}>{r}</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Grape Varietal</label>
-              <select value={filters.varietal} onChange={e => setFilter('varietal', e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500">
-                <option value="">All varietals</option>
-                {varietals.map(v => <option key={v} value={v!}>{v}</option>)}
-              </select>
-            </div>
+            <FilterSelect label="Vintage" value={filters.vintage} onChange={v => setFilter('vintage', v)}
+              options={[{ value: '', label: 'All vintages' }, ...vintages.map(v => ({ value: String(v), label: String(v) }))]} />
+            <FilterSelect label="Country" value={filters.country} onChange={v => setFilter('country', v)}
+              options={[{ value: '', label: 'All countries' }, ...countries.map(c => ({ value: c!, label: c! }))]} />
+            <FilterSelect label="Region" value={filters.region} onChange={v => setFilter('region', v)}
+              options={[{ value: '', label: 'All regions' }, ...regions.map(r => ({ value: r!, label: r! }))]} />
+            <FilterSelect label="Grape Varietal" value={filters.varietal} onChange={v => setFilter('varietal', v)}
+              options={[{ value: '', label: 'All varietals' }, ...varietals.map(v => ({ value: v!, label: v! }))]} />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-500">Sort by Quantity</label>
-            <select value={filters.qtySort} onChange={e => setFilter('qtySort', e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500">
-              <option value="">No sort</option>
-              <option value="desc">Most bottles first</option>
-              <option value="asc">Fewest bottles first</option>
-            </select>
-          </div>
+          <FilterSelect label="Sort by Quantity" value={filters.qtySort} onChange={v => setFilter('qtySort', v)}
+            options={[
+              { value: '', label: 'No sort' },
+              { value: 'desc', label: 'Most bottles first' },
+              { value: 'asc', label: 'Fewest bottles first' },
+            ]} />
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total Bottles" value={totalBottles} />
-        <StatCard label="Unique Wines" value={filtered.length} />
-        <StatCard label="Wineries" value={uniqueWineries} />
-        <StatCard label="Avg Rating" value={avgRating} />
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Bottles" value={totalBottles} accent="violet" delay={1} />
+        <StatCard label="Unique Wines" value={filtered.length} accent="cyan" delay={2} />
+        <StatCard label="Wineries" value={uniqueWineries} accent="pink" delay={3} />
+        <StatCard label="Avg Rating" value={avgRating} accent="violet" delay={4} />
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="glass p-10 text-center text-violet-300/70">
           <p>No wines match your filters.</p>
-          <button onClick={() => setFilters(EMPTY_FILTERS)} className="text-purple-600 text-sm mt-2 hover:underline">
+          <button onClick={() => setFilters(EMPTY_FILTERS)} className="text-cyan-300 text-sm mt-2 hover:text-cyan-200">
             Clear filters
           </button>
         </div>
       ) : (
         <>
+          {/* Bottles by location bar chart */}
           {locationData.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-800 mb-3">Bottles by Location</h3>
-              <ResponsiveContainer width="100%" height={200}>
+            <div className="glass p-4 fade-up">
+              <ChartHeader title="Bottles by Location" />
+              <ResponsiveContainer width="100%" height={210}>
                 <BarChart data={locationData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="bar-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#e879f9" stopOpacity={0.95} />
+                      <stop offset="50%" stopColor="#a78bfa" stopOpacity={0.95} />
+                      <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.7} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(167,139,250,0.12)" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                  <Tooltip cursor={{ fill: 'rgba(167,139,250,0.08)' }} />
+                  <Bar dataKey="value" fill="url(#bar-grad)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {vintageData.length > 0 && (
-              <PieCard title="By Vintage Year" data={vintageData} />
-            )}
-            {regionData.length > 0 && (
-              <PieCard title="By Region" data={regionData} />
-            )}
-            {countryData.length > 0 && (
-              <PieCard title="By Country" data={countryData} />
-            )}
+            {vintageData.length > 0 && <PieCard title="By Vintage Year" data={vintageData} />}
+            {regionData.length > 0 && <PieCard title="By Region" data={regionData} />}
+            {countryData.length > 0 && <PieCard title="By Country" data={countryData} />}
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-800 mb-3">
-              {activeCount > 0 ? 'Matching Wines' : 'Recent Additions'}
-            </h3>
+          {/* Recent / matching wines */}
+          <div className="glass p-4 fade-up">
+            <ChartHeader title={activeCount > 0 ? 'Matching Wines' : 'Recent Additions'} />
             <div className="space-y-2">
               {(activeCount > 0 ? filtered : wines).slice(0, 5).map(w => (
-                <div key={w.id} className="flex items-center justify-between text-sm">
-                  <div>
-                    <span className="font-medium text-gray-800">{w.name}</span>
-                    {w.vintage && <span className="text-gray-400 ml-1">{w.vintage}</span>}
-                    {w.varietal && <span className="text-gray-400 ml-1">· {w.varietal}</span>}
+                <div key={w.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded-lg hover:bg-violet-500/5 transition-colors">
+                  <div className="min-w-0">
+                    <span className="font-medium text-violet-100">{w.name}</span>
+                    {w.vintage && <span className="text-violet-400/70 ml-1.5">{w.vintage}</span>}
+                    {w.varietal && <span className="text-violet-400/50 ml-1.5">· {w.varietal}</span>}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>{w.quantity} btl</span>
-                    <span>{w.location}</span>
+                  <div className="flex items-center gap-2 text-xs text-violet-300/60 flex-shrink-0">
+                    <span className="text-cyan-300/80 font-medium tabular-nums">{w.quantity}</span>
+                    <span className="text-violet-300/50">{w.location}</span>
                   </div>
                 </div>
               ))}
             </div>
             {(activeCount > 0 ? filtered : wines).length > 5 && (
-              <Link href="/cellar" className="text-purple-600 text-sm mt-3 block hover:underline">
+              <Link href="/cellar" className="text-cyan-300 text-sm mt-3 inline-block hover:text-cyan-200">
                 View all {(activeCount > 0 ? filtered : wines).length} wines →
               </Link>
             )}
@@ -263,19 +247,49 @@ export default function Dashboard() {
   )
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({ label, value, accent, delay }: { label: string; value: string | number; accent: 'violet' | 'cyan' | 'pink'; delay: number }) {
+  const accentClass = accent === 'cyan' ? 'neon-cyan' : accent === 'pink' ? 'neon-pink' : 'neon-violet'
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-1">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
+    <div className={`glass glass-hover p-4 fade-up fade-up-${delay}`}>
+      <div className="text-[10px] uppercase tracking-[0.18em] text-violet-300/60 font-semibold">{label}</div>
+      <div className={`text-3xl font-bold mt-1 tabular-nums ${accentClass}`}>{value}</div>
+    </div>
+  )
+}
+
+function ChartHeader({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <span className="w-1 h-4 bg-gradient-to-b from-fuchsia-400 to-cyan-400 rounded-full" />
+      <h3 className="text-sm font-semibold uppercase tracking-widest text-violet-200">{title}</h3>
+    </div>
+  )
+}
+
+function FilterSelect({ label, value, onChange, options }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] uppercase tracking-wider text-violet-300/70 font-medium">{label}</label>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full text-sm bg-violet-950/40 border border-violet-400/20 text-violet-100 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-fuchsia-400/40 focus:border-fuchsia-400/60 outline-none"
+      >
+        {options.map(o => <option key={o.value} value={o.value} className="bg-violet-950">{o.label}</option>)}
+      </select>
     </div>
   )
 }
 
 function PieCard({ title, data }: { title: string; data: { name: string; value: number }[] }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <h3 className="font-semibold text-gray-800 mb-1">{title}</h3>
+    <div className="glass glass-hover p-4 fade-up">
+      <ChartHeader title={title} />
       <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie
@@ -285,23 +299,26 @@ function PieCard({ title, data }: { title: string; data: { name: string; value: 
             cx="50%"
             cy="50%"
             outerRadius={72}
-            innerRadius={28}
+            innerRadius={32}
+            paddingAngle={2}
             label={({ percent }: { percent?: number }) =>
-              percent != null && percent > 0.04 ? `${(percent * 100).toFixed(0)}%` : ''
+              percent != null && percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''
             }
             labelLine={false}
             fontSize={11}
+            stroke="rgba(15,8,32,0.9)"
+            strokeWidth={2}
           >
             {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
           </Pie>
           <Tooltip formatter={(v, n) => [`${v} bottles`, n]} />
           <Legend
             iconType="circle"
-            iconSize={8}
+            iconSize={7}
             formatter={(value: string) =>
-              value.length > 18 ? value.slice(0, 16) + '…' : value
+              value.length > 16 ? value.slice(0, 14) + '…' : value
             }
-            wrapperStyle={{ fontSize: 11 }}
+            wrapperStyle={{ fontSize: 11, color: 'rgba(196,181,253,0.85)' }}
           />
         </PieChart>
       </ResponsiveContainer>
