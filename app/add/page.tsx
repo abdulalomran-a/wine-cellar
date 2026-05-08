@@ -141,16 +141,50 @@ function AddWineForm() {
     if (!file) return
     setBarcodeBusy(true)
     setBarcodePhotoError(null)
+
+    // Reset input so same file can be re-selected later
+    const resetInput = () => { if (barcodePhotoRef.current) barcodePhotoRef.current.value = '' }
+
+    // Strategy 1: client-side scanFile (fast, free, but flaky on phone photos)
     try {
       const { Html5Qrcode } = await import('html5-qrcode')
       const tmp = new Html5Qrcode('hidden-barcode-reader')
       const result = await tmp.scanFile(file, false)
-      // Reset input so the same file can be re-selected
-      if (barcodePhotoRef.current) barcodePhotoRef.current.value = ''
+      resetInput()
       await handleBarcode(result)
+      setBarcodeBusy(false)
+      return
+    } catch {
+      // fall through to Claude vision
+    }
+
+    // Strategy 2: Claude vision reads the printed digits under the bars
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      const base64 = dataUrl.split(',')[1]
+      const mediaType = file.type || 'image/jpeg'
+
+      const res = await fetch('/api/read-barcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, mediaType }),
+      })
+      const data = await res.json()
+      resetInput()
+      if (data.found && data.barcode) {
+        await handleBarcode(data.barcode)
+      } else {
+        setBarcodePhotoError("Could not read the barcode digits. Try a sharper, closer photo — or type the numbers manually below.")
+      }
     } catch (err) {
       console.error(err)
-      setBarcodePhotoError('Could not read a barcode from that photo. Crop closer to just the barcode and try again.')
+      resetInput()
+      setBarcodePhotoError("Could not read the barcode. Try a sharper photo or type it manually.")
     } finally {
       setBarcodeBusy(false)
     }
