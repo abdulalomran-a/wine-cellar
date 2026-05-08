@@ -42,14 +42,14 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
   return (
     <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow overflow-hidden flex">
       {/* Bottle image */}
-      <div className="w-24 flex-shrink-0 bg-gray-50 flex items-center justify-center border-r border-gray-100" style={{ minHeight: 120 }}>
+      <div className="w-24 flex-shrink-0 bg-gray-50 flex items-center justify-center border-r border-gray-100 overflow-hidden" style={{ minHeight: 120 }}>
         {wine.image_url && !imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={wine.image_url}
             alt={wine.name}
             className="w-full h-full object-cover"
-            style={{ maxHeight: 140 }}
+            style={{ maxHeight: 140, transform: 'scale(1.8)', transformOrigin: 'center 45%' }}
             onError={() => setImgError(true)}
           />
         ) : (
