@@ -127,6 +127,35 @@ function AddWineForm() {
     await lookup(barcode)
   }
 
+  /**
+   * Decode a barcode from an uploaded photo using html5-qrcode's scanFile.
+   * This avoids the live-camera path which fails on iOS PWAs with
+   * "this page couldn't load".
+   */
+  const barcodePhotoRef = useRef<HTMLInputElement>(null)
+  const [barcodeBusy, setBarcodeBusy] = useState(false)
+  const [barcodePhotoError, setBarcodePhotoError] = useState<string | null>(null)
+
+  async function handleBarcodePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBarcodeBusy(true)
+    setBarcodePhotoError(null)
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode')
+      const tmp = new Html5Qrcode('hidden-barcode-reader')
+      const result = await tmp.scanFile(file, false)
+      // Reset input so the same file can be re-selected
+      if (barcodePhotoRef.current) barcodePhotoRef.current.value = ''
+      await handleBarcode(result)
+    } catch (err) {
+      console.error(err)
+      setBarcodePhotoError('Could not read a barcode from that photo. Crop closer to just the barcode and try again.')
+    } finally {
+      setBarcodeBusy(false)
+    }
+  }
+
   async function handleLabelPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -425,15 +454,40 @@ function AddWineForm() {
         )}
       </div>
 
-      {/* Barcode scanner — works for both wines and spirits */}
+      {/* Barcode — photo or manual entry. Works for wines and spirits. */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
         <h2 className="font-semibold text-gray-800">Barcode</h2>
+
+        {/* Hidden helper div for html5-qrcode's scanFile */}
+        <div id="hidden-barcode-reader" className="hidden" />
+
+        <input
+          ref={barcodePhotoRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleBarcodePhoto}
+        />
+
+        <button
+          type="button"
+          onClick={() => barcodePhotoRef.current?.click()}
+          disabled={barcodeBusy}
+          className="w-full py-3 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50"
+        >
+          {barcodeBusy ? 'Reading barcode…' : '📷 Take a Photo of the Barcode'}
+        </button>
+
+        <p className="text-xs text-gray-500 text-center">— or type it manually —</p>
+
         <div className="flex gap-2">
           <input
             type="text"
+            inputMode="numeric"
             value={form.barcode}
             onChange={e => set('barcode', e.target.value)}
-            placeholder="Enter or scan barcode..."
+            placeholder="e.g. 4750021000164"
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           />
           <button
@@ -444,25 +498,12 @@ function AddWineForm() {
           >
             Lookup
           </button>
-          <button
-            type="button"
-            onClick={() => setShowScanner(true)}
-            className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
-          >
-            Scan
-          </button>
         </div>
 
-        {lookupState === 'loading' && (
-          <p className="text-sm text-gray-500">Looking up bottle online...</p>
-        )}
-        {lookupState === 'found' && (
-          <p className="text-sm text-green-700">Bottle found — details and photo filled in below.</p>
-        )}
-        {lookupState === 'notfound' && (
-          <p className="text-sm text-amber-700">Not found in database — fill in details below.</p>
-        )}
-
+        {barcodePhotoError && <p className="text-sm text-amber-700">{barcodePhotoError}</p>}
+        {lookupState === 'loading' && <p className="text-sm text-gray-500">Looking up bottle online…</p>}
+        {lookupState === 'found' && <p className="text-sm text-green-700">Bottle found — details filled in below.</p>}
+        {lookupState === 'notfound' && <p className="text-sm text-amber-700">Not found in database — fill in details below.</p>}
       </div>
 
       {/* Details form */}
