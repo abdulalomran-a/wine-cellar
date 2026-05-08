@@ -14,6 +14,8 @@ type LookupResult = {
   region?: string | null
   country?: string | null
   image_url?: string | null
+  /** If the barcode is a case/multi-pack, how many individual bottles it contains */
+  pack_size?: number
 }
 
 export async function GET(req: NextRequest) {
@@ -61,7 +63,9 @@ async function tryOpenFoodFacts(barcode: string): Promise<LookupResult> {
       p.image_url ||
       null
 
-    const { category, spirit_type } = detectCategory(p.categories_tags ?? [], `${name} ${p.brands ?? ''} ${p.generic_name ?? ''}`)
+    const fullText = `${name} ${p.brands ?? ''} ${p.generic_name ?? ''}`
+    const { category, spirit_type } = detectCategory(p.categories_tags ?? [], fullText)
+    const pack_size = detectPackSize(fullText)
 
     return {
       found: true,
@@ -74,6 +78,7 @@ async function tryOpenFoodFacts(barcode: string): Promise<LookupResult> {
       region: p.origins || null,
       country: p.countries_tags?.[0]?.replace('en:', '') || null,
       image_url,
+      pack_size,
     }
   } catch {
     return { found: false }
@@ -96,6 +101,7 @@ async function tryBrocade(barcode: string): Promise<LookupResult> {
 
     const text = `${name} ${data.brand_name ?? ''} ${data.description ?? ''}`
     const { category, spirit_type } = detectCategory([], text)
+    const pack_size = detectPackSize(text)
 
     return {
       found: true,
@@ -108,6 +114,7 @@ async function tryBrocade(barcode: string): Promise<LookupResult> {
       region: null,
       country: null,
       image_url: data.image_url || null,
+      pack_size,
     }
   } catch {
     return { found: false }
@@ -128,6 +135,7 @@ async function tryUpcItemDb(barcode: string): Promise<LookupResult> {
     const item = data.items[0]
     const text = `${item.title ?? ''} ${item.brand ?? ''} ${item.category ?? ''}`
     const { category, spirit_type } = detectCategory([], text)
+    const pack_size = detectPackSize(text)
     return {
       found: true,
       category,
@@ -139,6 +147,7 @@ async function tryUpcItemDb(barcode: string): Promise<LookupResult> {
       region: null,
       country: null,
       image_url: item.images?.[0] ?? null,
+      pack_size,
     }
   } catch {
     return { found: false }
@@ -154,23 +163,26 @@ async function tryClaudeWebSearch(barcode: string): Promise<LookupResult> {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const response = await client.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 600,
-      tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 3 }],
+      max_tokens: 800,
+      tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 4 }],
       messages: [
         {
           role: 'user',
-          content: `Look up the product with barcode/UPC/EAN: ${barcode}.
+          content: `Look up the product with barcode/UPC/EAN/SCC: ${barcode}.
 
-Search the web. The barcode might be on retailer sites, distributor catalogs, or wine/spirits databases. Find what bottle it is.
+Search the web — retailer sites, distributor catalogs, GS1, wine/spirits databases. Identify what bottle (or case of bottles) it is.
+
+IMPORTANT — the barcode may be a CASE-level GTIN (a wholesale/trade unit, like 12x70cl or 6x75cl). If so, set "pack_size" to the number of individual bottles in the case. Pack-level barcodes typically start with 5 (GS1 logistic prefix) or end in different check digits than the consumer SKU.
 
 Return ONLY this JSON (no markdown, no other text):
 {
-  "name": "<product name>",
+  "name": "<product name without pack-size suffix>",
   "brand": "<brand or distillery or winery>",
   "category": "wine" or "spirit",
   "spirit_type": "<Whisky|Bourbon|Scotch|Vodka|Gin|Rum|Tequila|Mezcal|Cognac|Brandy|Liqueur|Other>" (only if category is spirit, otherwise null),
   "country": "<country>",
-  "vintage": <year or null>
+  "vintage": <year or null>,
+  "pack_size": <number of bottles in the case — 1 for a single bottle, 6 or 12 for a case>
 }
 
 If you cannot identify the product confidently, return: {"name": null}`,
@@ -191,6 +203,7 @@ If you cannot identify the product confidently, return: {"name": null}`,
       spirit_type: string | null
       country: string | null
       vintage: number | null
+      pack_size: number | null
     }
     if (!data.name) return { found: false }
 
@@ -205,11 +218,28 @@ If you cannot identify the product confidently, return: {"name": null}`,
       region: null,
       country: data.country || null,
       image_url: null,
+      pack_size: data.pack_size && data.pack_size > 1 ? data.pack_size : 1,
     }
   } catch (err) {
     console.error('claude lookup error:', err)
     return { found: false }
   }
+}
+
+/** Detect "12x75cl", "6 pack", "case of 12" etc. in product text, returning bottles count. */
+function detectPackSize(text: string): number {
+  const t = text.toLowerCase()
+  // Patterns: "12x75cl", "12 x 70cl", "12pack", "12-pack", "case of 12", "case 12"
+  const m =
+    t.match(/(\d+)\s*[x×*]\s*\d+\s*(?:cl|ml|l\b)/) ||
+    t.match(/(\d+)\s*[-\s]?pack/) ||
+    t.match(/case\s+of\s+(\d+)/) ||
+    t.match(/case\s+(\d+)/) ||
+    t.match(/\bpack\s+of\s+(\d+)/)
+  if (!m) return 1
+  const n = parseInt(m[1])
+  if (n >= 2 && n <= 24) return n
+  return 1
 }
 
 function extractVintage(text: string): number | null {

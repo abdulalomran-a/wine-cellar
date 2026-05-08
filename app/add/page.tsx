@@ -45,6 +45,7 @@ function AddWineForm() {
   const [form, setForm] = useState<WineForm>({ ...EMPTY, barcode: params.get('barcode') ?? '' })
   const [showScanner, setShowScanner] = useState(false)
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
+  const [lookupPackInfo, setLookupPackInfo] = useState<string | null>(null)
   const [labelState, setLabelState] = useState<'idle' | 'loading' | 'found' | 'error'>('idle')
   const [vivinoState, setVivinoState] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
   const [vivinoUrlState, setVivinoUrlState] = useState<'idle' | 'loading' | 'found' | 'error'>('idle')
@@ -98,6 +99,7 @@ function AddWineForm() {
       const res = await fetch(`/api/lookup?barcode=${encodeURIComponent(barcode)}`)
       const data = await res.json()
       if (data.found) {
+        const packSize = typeof data.pack_size === 'number' && data.pack_size > 1 ? data.pack_size : 1
         setForm(prev => ({
           ...prev,
           // Auto-switch to spirit if the lookup detected one — but don't downgrade
@@ -111,10 +113,21 @@ function AddWineForm() {
           region: data.region || prev.region,
           country: data.country || prev.country,
           image_url: data.image_url || prev.image_url,
+          // If we scanned a CASE barcode (12x75cl etc.), set quantity to the
+          // pack size — the cellar tracks individual bottles, not boxes.
+          quantity: packSize > 1 ? packSize.toString() : prev.quantity,
         }))
-        setLookupState('found')
+        setLookupState(packSize > 1 ? 'found' : 'found')
+        if (packSize > 1) {
+          // Stash a friendly message that the box was unpacked
+          setBarcodePhotoError(null)
+          setLookupPackInfo(`Detected a case of ${packSize} bottles — quantity set to ${packSize}.`)
+        } else {
+          setLookupPackInfo(null)
+        }
       } else {
         setLookupState('notfound')
+        setLookupPackInfo(null)
       }
     } catch {
       setLookupState('notfound')
@@ -536,7 +549,10 @@ function AddWineForm() {
 
         {barcodePhotoError && <p className="text-sm text-amber-700">{barcodePhotoError}</p>}
         {lookupState === 'loading' && <p className="text-sm text-gray-500">Looking up bottle online…</p>}
-        {lookupState === 'found' && <p className="text-sm text-green-700">Bottle found — details filled in below.</p>}
+        {lookupState === 'found' && !lookupPackInfo && <p className="text-sm text-green-700">Bottle found — details filled in below.</p>}
+        {lookupState === 'found' && lookupPackInfo && (
+          <p className="text-sm text-green-700">📦 {lookupPackInfo}</p>
+        )}
         {lookupState === 'notfound' && <p className="text-sm text-amber-700">Not found in database — fill in details below.</p>}
       </div>
 
