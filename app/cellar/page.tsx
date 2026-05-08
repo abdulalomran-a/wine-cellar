@@ -12,6 +12,7 @@ export default function CellarPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'wine' | 'spirit'>('all')
   const [sortBy, setSortBy] = useState<'name' | 'vintage' | 'added' | 'winery'>('added')
 
   useEffect(() => {
@@ -43,8 +44,9 @@ export default function CellarPage() {
     .filter(w => {
       const q = search.toLowerCase()
       return (
-        (!q || w.name.toLowerCase().includes(q) || w.winery?.toLowerCase().includes(q) || w.varietal?.toLowerCase().includes(q)) &&
-        (!locationFilter || w.location === locationFilter)
+        (!q || w.name.toLowerCase().includes(q) || w.winery?.toLowerCase().includes(q) || w.varietal?.toLowerCase().includes(q) || w.spirit_type?.toLowerCase().includes(q)) &&
+        (!locationFilter || w.location === locationFilter) &&
+        (categoryFilter === 'all' || w.category === categoryFilter)
       )
     })
     .sort((a, b) => {
@@ -75,11 +77,30 @@ export default function CellarPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Cellar</h1>
-          <p className="text-gray-500 text-sm mt-1">{wines.length} wines · {totalBottles} bottles</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {wines.filter(w => w.category !== 'spirit').length} wines · {wines.filter(w => w.category === 'spirit').length} spirits · {totalBottles} bottles
+          </p>
         </div>
         <Link href="/add" className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
-          Add Wine
+          Add
         </Link>
+      </div>
+
+      {/* Category tabs */}
+      <div className="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-xl">
+        {(['all', 'wine', 'spirit'] as const).map(c => (
+          <button
+            key={c}
+            onClick={() => setCategoryFilter(c)}
+            className={`py-1.5 rounded-lg text-sm font-medium capitalize transition-all ${
+              categoryFilter === c
+                ? c === 'spirit' ? 'bg-white text-amber-700 shadow-sm' : c === 'wine' ? 'bg-white text-purple-700 shadow-sm' : 'bg-white text-gray-800 shadow-sm'
+                : 'text-gray-500'
+            }`}
+          >
+            {c === 'all' ? 'All' : c === 'wine' ? 'Wines' : 'Spirits'}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}

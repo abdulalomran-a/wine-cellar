@@ -59,11 +59,20 @@ export default function Dashboard() {
   }, [wines, filters])
 
   const totalBottles = filtered.reduce((sum, w) => sum + w.quantity, 0)
-  const uniqueWineries = new Set(filtered.map(w => w.winery).filter(Boolean)).size
+  const wineCount = filtered.filter(w => w.category !== 'spirit').reduce((s, w) => s + w.quantity, 0)
+  const spiritCount = filtered.filter(w => w.category === 'spirit').reduce((s, w) => s + w.quantity, 0)
+  const uniqueWineries = new Set(filtered.filter(w => w.category !== 'spirit').map(w => w.winery).filter(Boolean)).size
   const ratedWines = filtered.filter(w => w.rating)
   const avgRating = ratedWines.length
     ? (ratedWines.reduce((s, w) => s + (w.rating ?? 0), 0) / ratedWines.length).toFixed(1)
     : '—'
+
+  // Spirit breakdown
+  const spiritTypeMap: Record<string, number> = {}
+  filtered.filter(w => w.category === 'spirit' && w.spirit_type).forEach(w => {
+    spiritTypeMap[w.spirit_type!] = (spiritTypeMap[w.spirit_type!] ?? 0) + w.quantity
+  })
+  const spiritTypeData = Object.entries(spiritTypeMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
 
   const locationMap: Record<string, number> = {}
   filtered.forEach(w => { locationMap[w.location] = (locationMap[w.location] ?? 0) + w.quantity })
@@ -174,8 +183,8 @@ export default function Dashboard() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Total Bottles" value={totalBottles} accent="violet" delay={1} />
-        <StatCard label="Unique Wines" value={filtered.length} accent="cyan" delay={2} />
-        <StatCard label="Wineries" value={uniqueWineries} accent="pink" delay={3} />
+        <StatCard label="Wines" value={wineCount} accent="pink" delay={2} />
+        <StatCard label="Spirits" value={spiritCount} accent="cyan" delay={3} />
         <StatCard label="Avg Rating" value={avgRating} accent="violet" delay={4} />
       </div>
 
@@ -212,7 +221,8 @@ export default function Dashboard() {
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {vintageData.length > 0 && <PieCard title="By Vintage Year" data={vintageData} />}
+            {spiritTypeData.length > 0 && <PieCard title="Spirits by Type" data={spiritTypeData} />}
+            {vintageData.length > 0 && <PieCard title="Wines by Vintage" data={vintageData} />}
             {regionData.length > 0 && <PieCard title="By Region" data={regionData} />}
             {countryData.length > 0 && <PieCard title="By Country" data={countryData} />}
           </div>

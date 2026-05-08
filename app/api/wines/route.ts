@@ -15,7 +15,8 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const body = await req.json()
 
-  if (!body.image_url && body.name) {
+  // Only auto-search images for wines (spirits don't have a reliable image source)
+  if (!body.image_url && body.name && body.category !== 'spirit') {
     body.image_url = await findWineImage(body.name, body.winery)
   }
 

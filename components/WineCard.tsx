@@ -21,6 +21,7 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
   const [qty, setQty] = useState(wine.quantity)
   const pendingQty = useRef(wine.quantity)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isSpirit = wine.category === 'spirit'
 
   function changeQty(delta: number) {
     const next = Math.max(0, pendingQty.current + delta)
@@ -62,17 +63,20 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
       <div className="flex-1 p-3 min-w-0">
         <div className="min-w-0">
           <h3 className="font-semibold text-gray-900 leading-tight break-words">{wine.name}</h3>
-          {wine.winery && <p className="text-sm text-gray-500 leading-tight mt-0.5 break-words">{wine.winery}</p>}
+          {wine.winery && !isSpirit && <p className="text-sm text-gray-500 leading-tight mt-0.5 break-words">{wine.winery}</p>}
+          {isSpirit && wine.spirit_type && <p className="text-sm text-amber-700 leading-tight mt-0.5 font-medium">{wine.spirit_type}</p>}
         </div>
         <div className="flex gap-1.5 mt-2">
-          <a
-            href={vivinoUrl(wine)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2 py-0.5 text-xs border border-red-200 rounded-md hover:bg-red-50 text-red-600 font-medium"
-          >
-            Vivino
-          </a>
+          {!isSpirit && (
+            <a
+              href={vivinoUrl(wine)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-0.5 text-xs border border-red-200 rounded-md hover:bg-red-50 text-red-600 font-medium"
+            >
+              Vivino
+            </a>
+          )}
           <button
             onClick={() => onEdit(wine)}
             className="px-2 py-0.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600"
@@ -88,17 +92,17 @@ export default function WineCard({ wine, onDelete, onEdit, onQuantityChange }: P
         </div>
 
         <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-          {wine.vintage && (
+          {wine.vintage && !isSpirit && (
             <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium">
               {wine.vintage}
             </span>
           )}
-          {wine.varietal && (
+          {wine.varietal && !isSpirit && (
             <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded">
               {wine.varietal}
             </span>
           )}
-          {wine.region && (
+          {wine.region && !isSpirit && (
             <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
               {wine.region}
             </span>

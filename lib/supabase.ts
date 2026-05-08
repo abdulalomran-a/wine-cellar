@@ -7,6 +7,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export type Wine = {
   id: string
+  category: 'wine' | 'spirit'
+  spirit_type: string | null
   name: string
   vintage: number | null
   winery: string | null
@@ -27,6 +29,21 @@ export type Wine = {
   created_at: string
   updated_at: string
 }
+
+export const SPIRIT_TYPES = [
+  'Whisky',
+  'Bourbon',
+  'Scotch',
+  'Vodka',
+  'Gin',
+  'Rum',
+  'Tequila',
+  'Mezcal',
+  'Cognac',
+  'Brandy',
+  'Liqueur',
+  'Other',
+] as const
 
 export type Location = {
   id: string

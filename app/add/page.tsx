@@ -4,10 +4,13 @@ import { useState, Suspense, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import LocationSelect from '@/components/LocationSelect'
+import { SPIRIT_TYPES } from '@/lib/supabase'
 
 const BarcodeScanner = dynamic(() => import('@/components/BarcodeScanner'), { ssr: false })
 
 type WineForm = {
+  category: 'wine' | 'spirit'
+  spirit_type: string
   name: string
   winery: string
   vintage: string
@@ -28,6 +31,7 @@ type WineForm = {
 }
 
 const EMPTY: WineForm = {
+  category: 'wine', spirit_type: '',
   name: '', winery: '', vintage: '', varietal: '', region: '',
   country: '', location: '', quantity: '1', purchase_price: '',
   purchase_date: '', notes: '', barcode: '', image_url: '', rating: 0,
@@ -58,6 +62,8 @@ function AddWineForm() {
       .then(r => r.json())
       .then(w => {
         setForm({
+          category: w.category ?? 'wine',
+          spirit_type: w.spirit_type ?? '',
           name: w.name ?? '',
           winery: w.winery ?? '',
           vintage: w.vintage?.toString() ?? '',
@@ -270,12 +276,15 @@ function AddWineForm() {
         }
       }
 
+      const isSpirit = form.category === 'spirit'
       const payload = {
+        category: form.category,
+        spirit_type: isSpirit ? (form.spirit_type || null) : null,
         name: form.name.trim(),
-        winery: form.winery || null,
-        vintage: form.vintage ? parseInt(form.vintage) : null,
-        varietal: form.varietal || null,
-        region: form.region || null,
+        winery: isSpirit ? null : (form.winery || null),
+        vintage: isSpirit ? null : (form.vintage ? parseInt(form.vintage) : null),
+        varietal: isSpirit ? null : (form.varietal || null),
+        region: isSpirit ? null : (form.region || null),
         country: form.country || null,
         location: form.location,
         quantity: parseInt(form.quantity) || 1,
@@ -284,10 +293,10 @@ function AddWineForm() {
         notes: form.notes || null,
         barcode: form.barcode || null,
         image_url: form.image_url || null,
-        rating: form.rating || null,
-        vivino_url: form.vivino_url || null,
-        vivino_rating: form.vivino_rating ? parseFloat(form.vivino_rating) : null,
-        vivino_price: form.vivino_price ? parseFloat(form.vivino_price) : null,
+        rating: isSpirit ? null : (form.rating || null),
+        vivino_url: isSpirit ? null : (form.vivino_url || null),
+        vivino_rating: isSpirit ? null : (form.vivino_rating ? parseFloat(form.vivino_rating) : null),
+        vivino_price: isSpirit ? null : (form.vivino_price ? parseFloat(form.vivino_price) : null),
       }
 
       const res = await fetch(editId ? `/api/wines/${editId}` : '/api/wines', {
@@ -305,19 +314,52 @@ function AddWineForm() {
 
   if (loadingEdit) return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
 
+  const isSpirit = form.category === 'spirit'
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{editId ? 'Edit Wine' : 'Add Wine'}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {editId ? `Edit ${isSpirit ? 'Spirit' : 'Wine'}` : `Add ${isSpirit ? 'Spirit' : 'Wine'}`}
+        </h1>
         <p className="text-gray-500 text-sm mt-1">
-          {editId ? 'Update the details below' : 'Scan the label or barcode to auto-fill, or enter manually'}
+          {editId ? 'Update the details below' : isSpirit ? 'Enter the bottle details' : 'Scan the label or barcode to auto-fill, or enter manually'}
         </p>
       </div>
 
+      {/* Category toggle (hidden when editing — keep the existing category) */}
+      {!editId && (
+        <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => set('category', 'wine')}
+            className={`py-2 rounded-lg text-sm font-medium transition-all ${
+              form.category === 'wine'
+                ? 'bg-white text-purple-700 shadow-sm'
+                : 'text-gray-500'
+            }`}
+          >
+            Wine
+          </button>
+          <button
+            type="button"
+            onClick={() => set('category', 'spirit')}
+            className={`py-2 rounded-lg text-sm font-medium transition-all ${
+              form.category === 'spirit'
+                ? 'bg-white text-amber-700 shadow-sm'
+                : 'text-gray-500'
+            }`}
+          >
+            Spirit
+          </button>
+        </div>
+      )}
+
       {/* Photo section */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-        <h2 className="font-semibold text-gray-800">{editId ? 'Photo' : 'Scan Label'}</h2>
-        {!editId && <p className="text-xs text-gray-500">Take a photo of the label — Claude will read the wine details automatically</p>}
+        <h2 className="font-semibold text-gray-800">{editId ? 'Photo' : isSpirit ? 'Photo' : 'Scan Label'}</h2>
+        {!editId && !isSpirit && <p className="text-xs text-gray-500">Take a photo of the label — Claude will read the wine details automatically</p>}
+        {!editId && isSpirit && <p className="text-xs text-gray-500">Optional — take a photo of the bottle</p>}
 
         <input
           ref={labelInputRef}
@@ -379,7 +421,8 @@ function AddWineForm() {
         )}
       </div>
 
-      {/* Barcode scanner */}
+      {/* Barcode scanner — wine only */}
+      {!isSpirit && (
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
         <h2 className="font-semibold text-gray-800">Barcode</h2>
         <div className="flex gap-2">
@@ -418,42 +461,57 @@ function AddWineForm() {
         )}
 
       </div>
+      )}
 
-      {/* Wine details form */}
+      {/* Details form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
-        <h2 className="font-semibold text-gray-800">Wine Details</h2>
+        <h2 className="font-semibold text-gray-800">{isSpirit ? 'Spirit Details' : 'Wine Details'}</h2>
 
-        <Field label="Wine Name *">
+        {isSpirit && (
+          <Field label="Type *">
+            <select value={form.spirit_type} onChange={e => set('spirit_type', e.target.value)}
+              required className="input">
+              <option value="">Select type…</option>
+              {SPIRIT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </Field>
+        )}
+
+        <Field label={isSpirit ? 'Bottle Name *' : 'Wine Name *'}>
           <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
-            placeholder="e.g. Chateau Margaux" required className="input" />
+            placeholder={isSpirit ? 'e.g. Macallan 18' : 'e.g. Chateau Margaux'} required className="input" />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Winery / Producer">
-            <input type="text" value={form.winery} onChange={e => set('winery', e.target.value)}
-              placeholder="Producer name" className="input" />
-          </Field>
-          <Field label="Vintage Year">
-            <input type="number" value={form.vintage} onChange={e => set('vintage', e.target.value)}
-              placeholder="e.g. 2019" min={1900} max={new Date().getFullYear()} className="input" />
-          </Field>
-        </div>
+        {!isSpirit && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Winery / Producer">
+                <input type="text" value={form.winery} onChange={e => set('winery', e.target.value)}
+                  placeholder="Producer name" className="input" />
+              </Field>
+              <Field label="Vintage Year">
+                <input type="number" value={form.vintage} onChange={e => set('vintage', e.target.value)}
+                  placeholder="e.g. 2019" min={1900} max={new Date().getFullYear()} className="input" />
+              </Field>
+            </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Grape Varietal">
-            <input type="text" value={form.varietal} onChange={e => set('varietal', e.target.value)}
-              placeholder="e.g. Cabernet Sauvignon" className="input" />
-          </Field>
-          <Field label="Region">
-            <input type="text" value={form.region} onChange={e => set('region', e.target.value)}
-              placeholder="e.g. Bordeaux" className="input" />
-          </Field>
-        </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Grape Varietal">
+                <input type="text" value={form.varietal} onChange={e => set('varietal', e.target.value)}
+                  placeholder="e.g. Cabernet Sauvignon" className="input" />
+              </Field>
+              <Field label="Region">
+                <input type="text" value={form.region} onChange={e => set('region', e.target.value)}
+                  placeholder="e.g. Bordeaux" className="input" />
+              </Field>
+            </div>
+          </>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Country">
             <input type="text" value={form.country} onChange={e => set('country', e.target.value)}
-              placeholder="e.g. France" className="input" />
+              placeholder={isSpirit ? 'e.g. Scotland' : 'e.g. France'} className="input" />
           </Field>
           <Field label="Quantity">
             <input type="number" value={form.quantity} onChange={e => set('quantity', e.target.value)}
@@ -474,6 +532,7 @@ function AddWineForm() {
           </Field>
         </div>
 
+        {!isSpirit && (
         <Field label="Rating (1–5)">
           <div className="flex gap-2 pt-1">
             {[1, 2, 3, 4, 5].map(n => (
@@ -492,8 +551,10 @@ function AddWineForm() {
             ))}
           </div>
         </Field>
+        )}
 
-        {/* Vivino */}
+        {/* Vivino — wine only */}
+        {!isSpirit && (
         <div className="space-y-2 pt-1">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-gray-700">Vivino</label>
@@ -540,6 +601,7 @@ function AddWineForm() {
             </Field>
           </div>
         </div>
+        )}
 
         <Field label="Notes">
           <textarea value={form.notes} onChange={e => set('notes', e.target.value)}

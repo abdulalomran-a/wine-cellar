@@ -8,13 +8,13 @@ import SignOutButton from '@/components/SignOutButton'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Wine Cellar',
+  title: 'Cellar',
   description: 'Track and manage your wine collection',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Wine Cellar',
+    title: 'Cellar',
   },
   icons: {
     apple: '/apple-touch-icon.png',
@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="hidden sm:block bg-white border-b border-gray-200 sticky top-0 z-40">
           <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
             <Link href="/" className="font-bold text-purple-700 text-lg tracking-tight">
-              Wine Cellar
+              Cellar
             </Link>
             <nav className="flex items-center gap-1">
               <Link href="/" className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100">
@@ -47,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Cellar
               </Link>
               <Link href="/add" className="px-3 py-1.5 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700">
-                Add Wine
+                Add
               </Link>
               <SignOutButton className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:bg-gray-100" />
             </nav>
@@ -57,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Mobile header */}
         <header className="sm:hidden bg-white border-b border-gray-200 sticky top-0 z-40">
           <div className="px-4 h-12 flex items-center justify-between">
-            <span className="font-bold text-purple-700 text-base tracking-tight">Wine Cellar</span>
+            <span className="font-bold text-purple-700 text-base tracking-tight">Cellar</span>
             <SignOutButton className="text-xs text-gray-400 hover:text-gray-600" />
           </div>
         </header>
