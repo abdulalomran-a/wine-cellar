@@ -100,6 +100,10 @@ function AddWineForm() {
       if (data.found) {
         setForm(prev => ({
           ...prev,
+          // Auto-switch to spirit if the lookup detected one — but don't downgrade
+          // if the user explicitly chose Spirit and we got back wine (let them keep their choice)
+          category: data.category === 'spirit' ? 'spirit' : prev.category,
+          spirit_type: data.spirit_type || prev.spirit_type,
           name: data.name || prev.name,
           winery: data.winery || prev.winery,
           vintage: data.vintage?.toString() || prev.vintage,
@@ -421,8 +425,7 @@ function AddWineForm() {
         )}
       </div>
 
-      {/* Barcode scanner — wine only */}
-      {!isSpirit && (
+      {/* Barcode scanner — works for both wines and spirits */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
         <h2 className="font-semibold text-gray-800">Barcode</h2>
         <div className="flex gap-2">
@@ -461,7 +464,6 @@ function AddWineForm() {
         )}
 
       </div>
-      )}
 
       {/* Details form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
